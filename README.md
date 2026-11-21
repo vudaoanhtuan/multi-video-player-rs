@@ -19,6 +19,21 @@ cargo test                               # unit tests and end-to-end playback te
 
 The end-to-end tests make small videos with the `ffmpeg` command. They are skipped if the command is not installed.
 
+## App bundle
+
+```sh
+./scripts/bundle-macos.sh
+open "dist/Video Player.app"
+```
+
+The script makes `dist/Video Player.app`. The app is one executable of about 16 MB with FFmpeg inside. It uses only libraries that are part of macOS, so it runs with no Homebrew installation. You can move it to `/Applications` and open it with a double-click.
+
+- The first run downloads the FFmpeg source (pinned to one commit) and builds a small static FFmpeg in `target/ffmpeg-static/`. This takes about 1 minute. Later runs use the result again.
+- The static FFmpeg holds the MKV reader and these video decoders: H.264, HEVC, MJPEG, MPEG-4, MPEG-2, VP8, VP9, AV1. Change `DECODERS` in `scripts/build-ffmpeg.sh` to add a format.
+- The app runs on the CPU type of the Mac that built it (Apple Silicon or Intel).
+- The signature is a local signature. To give the app to other persons, sign it with a Developer ID and notarize it. If you do not, macOS blocks the app on their Macs.
+- This FFmpeg build has the LGPL license. If you distribute the app, obey the LGPL rules for static linking.
+
 ## Controls
 
 | Input | Result |
@@ -94,5 +109,6 @@ Without these steps, Windows uses the fallback file. The fallback file was not b
 
 ## Limits
 
-- The app links to the FFmpeg libraries of the system. An app bundle for distribution must include these libraries.
+- `cargo run` links to the FFmpeg libraries of the system. Only the app bundle is self-contained.
+- The app bundle has no custom icon.
 - HDR video (BT.2020 PQ or HLG) is shown with no tone mapping.

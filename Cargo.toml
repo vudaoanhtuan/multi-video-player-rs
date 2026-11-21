@@ -17,6 +17,9 @@ env_logger = "0.11"
 bytemuck = { version = "1", features = ["derive"] }
 
 [features]
+# Link FFmpeg into the executable. Needs FFMPEG_DIR to point to a static
+# FFmpeg. Use scripts/bundle-macos.sh, which sets all of this.
+static-ffmpeg = ["ffmpeg-sys-next/static"]
 # Development tool: scripted input and window pictures. See src/ui/selftest.rs.
 selftest = []
 
