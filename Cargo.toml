@@ -9,6 +9,8 @@ description = "Multi-camera synced video player"
 eframe = { version = "0.37", default-features = false, features = ["wgpu", "default_fonts", "clipboard"] }
 egui = "0.37"
 egui-wgpu = "0.37"
+# SVG loader for the icons in assets/icons.
+egui_extras = { version = "0.37", default-features = false, features = ["svg"] }
 ffmpeg-sys-next = { version = "9.1", default-features = false, features = ["avcodec", "avformat", "swscale"] }
 rfd = "0.18"
 libc = "0.2"

@@ -40,12 +40,12 @@ The script makes `dist/Video Player.app`. The app is one executable of about 16 
 |---|---|
 | Space | Play or pause |
 | Left / Right arrow | Jump 10 seconds back / forward |
-| C | Open the camera picker |
+| C, or the camera button | Open the camera picker |
 | Cmd+O | Open a folder |
 | G | Open the "go to time" dialog. Type or paste `HH:mm:ss` or `HHmmss` |
 | Shift+G | Jump to the time in the clipboard, if the clipboard text is `HH:mm:ss` or `HHmmss` |
 | T, or a click on the timer | Pause and copy the clock time |
-| F, or the BB button | Bbox capture: pause, click a camera, then draw a rectangle on its frame. The area is copied as a picture |
+| F, or the scissors button | Bbox capture: pause, click a camera, then draw a rectangle on its frame. The area is copied as a picture |
 | Click or drag on the progress bar | Jump |
 
 ## Design
@@ -103,6 +103,10 @@ To add Windows support with full performance:
 4. Add the `x11` and `wayland` features of `eframe` only if Linux is also a target.
 
 Without these steps, Windows uses the fallback file. The fallback file was not built or tested on Windows.
+
+## Icons
+
+The control bar icons are SVG files in `assets/icons/`, from the Material Icons set (Apache License 2.0). See `assets/icons/README.md` for how to add an icon.
 
 ## Development tools
 

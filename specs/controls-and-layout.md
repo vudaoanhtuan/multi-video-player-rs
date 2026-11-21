@@ -19,7 +19,7 @@ The window shows only two parts: the camera grid and the control bar. There is n
 |                   camera grid (tiles)                    |
 |                                                          |
 +----------------------------------------------------------+
-| play/pause | 21:30:05 | progress bar | speed | BB | cameras |
+| play/pause | 21:30:05 | progress bar | speed | bbox | cameras |
 +----------------------------------------------------------+
 ```
 
@@ -41,12 +41,13 @@ The control bar is one row at the bottom of the window. From left to right:
 | Timer | Shows the clock time. A click on it copies the time and pauses playback. |
 | Progress bar | Shows the clock position in the total time range. Takes all spare width. |
 | Speed menu | Sets the playback speed. |
-| BB button | Starts the bbox capture. See [bbox-capture.md](bbox-capture.md). |
-| Cameras button | Opens the camera picker dialog. |
+| Bbox button | A button with a scissors icon. Starts the bbox capture. See [bbox-capture.md](bbox-capture.md). |
+| Cameras button | A button with a camera icon and the count of shown cameras. Opens the camera picker dialog. |
 
 ## Play and pause
 
 - The button changes between play and pause. The space key does the same.
+- The button shows the action of a click: a play icon while paused, and a pause icon while playing.
 - After a folder opens, the state is paused.
 - If the clock is at the end of the range, play starts again from the start of the range.
 
@@ -106,7 +107,10 @@ The control bar is one row at the bottom of the window. From left to right:
   - Cancel closes the dialog with no change. The Escape key does the same.
 - Playback continues while the dialog is open.
 - If the list is longer than the dialog, the list scrolls.
-- The cameras button shows the count, for example "Cameras 3/5".
+- The cameras button shows a camera icon and the count, for example "3/5". With no folder open, it shows the icon only.
+- The bbox button and the cameras button have no text label. Each button shows its name and its key when the pointer is over it.
+- The icons are SVG files from the Material Icons set: `play_arrow` and `pause` for the play/pause button, `content_cut` for the bbox button, and `photo_camera` for the cameras button. Keep the files in `assets/icons/`.
+- An icon has the color of the button text in each button state (normal, pointer over, pressed, disabled).
 - If no camera is selected, the grid is empty and the clock still works.
 
 ## Audio

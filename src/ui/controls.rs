@@ -1,6 +1,8 @@
 //! The control bar: play/pause, timer, progress bar, speed menu, cameras button.
 //! See `specs/controls-and-layout.md`.
 
+use std::sync::OnceLock;
+
 use egui::{Align, Color32, FontId, Layout, Rect, RichText, Sense, Stroke, StrokeKind, Ui};
 
 use super::session::Session;
@@ -13,6 +15,35 @@ const TIMER_WIDTH: f32 = 84.0;
 const MARKER_RADIUS: f32 = 6.5;
 const ACCENT: Color32 = Color32::from_rgb(76, 148, 255);
 const NO_TIME: &str = "--:--:--";
+/// Icons are drawn in a square of this size.
+const ICON_SIZE: f32 = 20.0;
+
+/// An SVG icon from `assets/icons`.
+struct Icon {
+    /// Name of the picture in the egui image cache.
+    uri: &'static str,
+    svg: &'static str,
+    /// The SVG with a white fill, made at the first use.
+    white: OnceLock<egui::load::Bytes>,
+}
+
+impl Icon {
+    const fn new(uri: &'static str, svg: &'static str) -> Self {
+        Self { uri, svg, white: OnceLock::new() }
+    }
+
+    /// The icon as a white picture. A tint then gives it the color of the
+    /// button text. The source files are black, and a tint cannot change black.
+    fn image(&self) -> egui::Image<'static> {
+        let white = self.white.get_or_init(|| self.svg.replacen("<svg ", "<svg fill=\"#ffffff\" ", 1).into_bytes().into());
+        egui::Image::from_bytes(self.uri, white.clone())
+    }
+}
+
+static PLAY_ICON: Icon = Icon::new("bytes://icons/play_arrow.svg", include_str!("../../assets/icons/play_arrow.svg"));
+static PAUSE_ICON: Icon = Icon::new("bytes://icons/pause.svg", include_str!("../../assets/icons/pause.svg"));
+static SCISSORS_ICON: Icon = Icon::new("bytes://icons/content_cut.svg", include_str!("../../assets/icons/content_cut.svg"));
+static CAMERA_ICON: Icon = Icon::new("bytes://icons/photo_camera.svg", include_str!("../../assets/icons/photo_camera.svg"));
 
 pub fn speed_label(speed: f64) -> String {
     format!("{speed}x")
@@ -40,18 +71,17 @@ pub fn show(ui: &mut Ui, mut session: Option<&mut Session>, clock: Option<&Snaps
             // The items on the right are laid out first. The progress bar
             // then takes all the width that is left.
             ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-                let cameras = match session.as_deref() {
-                    Some(s) => format!("Cameras {}/{}", s.shown_count(), s.library.cameras.len()),
-                    None => "Cameras".to_owned(),
-                };
-                if ui.add_sized([0.0, BUTTON_HEIGHT], egui::Button::new(cameras)).clicked() {
+                // Cameras: a camera icon and the count of shown cameras.
+                let count = session.as_deref().map(|s| format!("{}/{}", s.shown_count(), s.library.cameras.len()));
+                let cameras = icon_button(ui, &CAMERA_ICON, count.as_deref(), false);
+                if cameras.on_hover_text("Choose the cameras to show (C)").clicked() {
                     if let Some(session) = session.as_deref_mut() {
                         session.picker = Some(session.shown.clone());
                     }
                 }
-                // Bbox capture. The button looks pressed during the camera choice.
+                // Bbox capture: a scissors icon. The button looks pressed during the camera choice.
                 let picking = session.as_deref().is_some_and(|s| s.bbox.is_picking());
-                let bbox = ui.add_sized([0.0, BUTTON_HEIGHT], egui::Button::new("BB").selected(picking));
+                let bbox = icon_button(ui, &SCISSORS_ICON, None, picking);
                 if bbox.on_hover_text("Bbox capture: copy an area of a camera frame (F)").clicked() {
                     if let Some(session) = session.as_deref_mut() {
                         session.toggle_bbox();
@@ -77,24 +107,39 @@ fn text_width(ui: &Ui, text: &str) -> f32 {
     ui.painter().layout_no_wrap(text.to_owned(), font, Color32::WHITE).size().x
 }
 
-/// A button with a play triangle or two pause bars. The icon is drawn with
-/// shapes, so it does not depend on a font.
+/// The play/pause button. It shows the action of a click: a play icon
+/// while paused, and a pause icon while playing.
 fn play_button(ui: &mut Ui, playing: bool) -> egui::Response {
-    let (rect, response) = ui.allocate_exact_size(egui::vec2(36.0, BUTTON_HEIGHT), Sense::click());
+    let icon = if playing { &PAUSE_ICON } else { &PLAY_ICON };
+    icon_button(ui, icon, None, false).on_hover_text(if playing { "Pause (Space)" } else { "Play (Space)" })
+}
+
+/// A button with an SVG icon. Optional text comes after the icon.
+/// `selected` shows the button as pressed.
+fn icon_button(ui: &mut Ui, icon: &Icon, text: Option<&str>, selected: bool) -> egui::Response {
+    const PADDING: f32 = 8.0;
+    const GAP: f32 = 5.0;
+    let font = egui::TextStyle::Button.resolve(ui.style());
+    let galley = text.map(|text| ui.painter().layout_no_wrap(text.to_owned(), font, Color32::PLACEHOLDER));
+    let text_width = galley.as_ref().map_or(0.0, |galley| GAP + galley.size().x);
+    let size = egui::vec2(PADDING + ICON_SIZE + text_width + PADDING, BUTTON_HEIGHT);
+    let (rect, response) = ui.allocate_exact_size(size, Sense::click());
+
     let visuals = ui.style().interact(&response);
-    ui.painter().rect(rect, visuals.corner_radius, visuals.bg_fill, visuals.bg_stroke, StrokeKind::Inside);
-    let color = visuals.fg_stroke.color;
-    let c = rect.center();
-    if playing {
-        for x in [-4.5, 1.5] {
-            let bar = Rect::from_min_size(c + egui::vec2(x, -6.0), egui::vec2(3.0, 12.0));
-            ui.painter().rect_filled(bar, 0.5, color);
-        }
+    let (fill, stroke) = if selected {
+        (ui.visuals().selection.bg_fill, ui.visuals().selection.stroke)
     } else {
-        let points = vec![c + egui::vec2(-4.0, -6.5), c + egui::vec2(-4.0, 6.5), c + egui::vec2(6.5, 0.0)];
-        ui.painter().add(egui::Shape::convex_polygon(points, color, Stroke::NONE));
+        (visuals.weak_bg_fill, visuals.bg_stroke)
+    };
+    let color = if selected { ui.visuals().selection.stroke.color } else { visuals.text_color() };
+    ui.painter().rect(rect, visuals.corner_radius, fill, stroke, StrokeKind::Inside);
+    let icon_center = egui::pos2(rect.left() + PADDING + ICON_SIZE / 2.0, rect.center().y);
+    icon.image().tint(color).paint_at(ui, Rect::from_center_size(icon_center, egui::Vec2::splat(ICON_SIZE)));
+    if let Some(galley) = galley {
+        let pos = egui::pos2(rect.left() + PADDING + ICON_SIZE + GAP, rect.center().y - galley.size().y / 2.0);
+        ui.painter().galley(pos, galley, color);
     }
-    response.on_hover_text(if playing { "Pause (Space)" } else { "Play (Space)" })
+    response
 }
 
 /// The clock time. It cannot be edited. A click copies the time and pauses playback.

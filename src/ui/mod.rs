@@ -75,6 +75,8 @@ impl App {
     pub fn new(cc: &eframe::CreationContext<'_>, folder: Option<PathBuf>) -> Result<Self, String> {
         let ctx = cc.egui_ctx.clone();
         ctx.set_theme(egui::Theme::Dark);
+        // The loader that draws the SVG icons of the control bar.
+        egui_extras::install_image_loaders(&ctx);
 
         let render_state = cc.wgpu_render_state.as_ref().ok_or("the wgpu renderer is not available")?;
         let support = platform::video_support(&render_state.device);

@@ -133,7 +133,7 @@ impl Session {
         }
     }
 
-    /// The BB button or the F key: pauses playback and starts the camera
+    /// The bbox button or the F key: pauses playback and starts the camera
     /// choice of the bbox capture. A second call stops the camera choice.
     pub fn toggle_bbox(&mut self) {
         match self.bbox {
