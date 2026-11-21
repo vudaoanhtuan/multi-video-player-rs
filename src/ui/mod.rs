@@ -1,7 +1,9 @@
 //! The app window: camera grid and control bar. The UI is egui, which is the
 //! same on all platforms.
 
+mod clipboard;
 mod controls;
+mod goto;
 mod grid;
 mod picker;
 #[cfg(feature = "selftest")]
@@ -21,6 +23,7 @@ use crate::media::DecodeOptions;
 use crate::platform::{self, AppMenu, MenuCommand};
 use crate::playback::Waker;
 use crate::render::VideoRenderer;
+use crate::time::parse_pasted_time_of_day;
 use session::{Session, ARROW_JUMP};
 
 /// Refresh the timer at least this often while playing.
@@ -31,6 +34,8 @@ const TIMER_REFRESH: Duration = Duration::from_millis(250);
 const MIN_REFRESH_INTERVAL: Duration = Duration::from_millis(14);
 /// How long the "files skipped" message stays on screen.
 const NOTICE_TIME: Duration = Duration::from_secs(8);
+/// How long the "copied" message stays on screen.
+const COPIED_NOTICE_TIME: Duration = Duration::from_secs(2);
 
 enum State {
     NoFolder,
@@ -55,6 +60,9 @@ pub struct App {
     _menu: Option<AppMenu>,
     state: State,
     notice: Option<Notice>,
+    clipboard: clipboard::Clipboard,
+    /// Shift+G asked for the clipboard text. A valid time in it starts a jump.
+    clipboard_jump: bool,
     last_refresh: Instant,
     #[cfg(feature = "selftest")]
     script: Option<selftest::Script>,
@@ -103,6 +111,8 @@ impl App {
             _menu: menu,
             state: State::NoFolder,
             notice: None,
+            clipboard: clipboard::Clipboard::default(),
+            clipboard_jump: false,
             last_refresh: Instant::now(),
             #[cfg(feature = "selftest")]
             script: selftest::Script::from_env(),
@@ -164,25 +174,60 @@ impl App {
         };
     }
 
-    /// Space, arrow keys, and C. They do nothing while a text box or the
-    /// dialog has the keyboard focus.
+    /// Keyboard shortcuts. They do nothing while a text box or a dialog has
+    /// the keyboard focus.
     fn handle_keys(&mut self, ctx: &egui::Context) {
         let State::Ready(session) = &mut self.state else { return };
-        if session.timer_edit.is_some() || session.picker.is_some() || ctx.text_edit_focused() {
+
+        // The answer to an earlier Shift+G: jump if the clipboard text is a
+        // time in a full form. With other text, nothing happens.
+        if let Some(text) = self.clipboard.take_requested(ctx) {
+            if std::mem::take(&mut self.clipboard_jump) && session.goto.is_none() {
+                let time_of_day = parse_pasted_time_of_day(&text);
+                // The clipboard can hold private text. Do not log the text.
+                log::debug!("Shift+G: clipboard text is a time: {}", time_of_day.is_some());
+                if let Some(time_of_day) = time_of_day {
+                    session.jump_to_time_of_day(time_of_day);
+                }
+            }
+        }
+
+        if session.goto.is_some() || session.picker.is_some() || ctx.text_edit_focused() {
             return;
         }
-        let pressed = |key| ctx.input_mut(|i| i.consume_key(Modifiers::NONE, key));
-        if pressed(Key::Space) {
+        let pressed = |modifiers, key| ctx.input_mut(|i| i.consume_key(modifiers, key));
+        if pressed(Modifiers::NONE, Key::Space) {
             session.toggle_play();
         }
-        if pressed(Key::ArrowLeft) {
+        if pressed(Modifiers::NONE, Key::ArrowLeft) {
             session.jump_by(-ARROW_JUMP);
         }
-        if pressed(Key::ArrowRight) {
+        if pressed(Modifiers::NONE, Key::ArrowRight) {
             session.jump_by(ARROW_JUMP);
         }
-        if pressed(Key::C) {
+        if pressed(Modifiers::NONE, Key::C) {
             session.picker = Some(session.shown.clone());
+        }
+        if pressed(Modifiers::NONE, Key::T) {
+            session.copy_time_and_pause();
+        }
+        // Shift+G first: a check for G with no modifier also accepts Shift+G.
+        if pressed(Modifiers::SHIFT, Key::G) {
+            self.clipboard.request(ctx);
+            self.clipboard_jump = true;
+        } else if pressed(Modifiers::NONE, Key::G) {
+            session.open_goto();
+            // The same key press also arrives as the text "g". Keep it out of the text box.
+            ctx.input_mut(|i| i.events.retain(|event| !matches!(event, egui::Event::Text(_))));
+        }
+    }
+
+    /// Moves the time from a click on the timer, or from the T key, to the clipboard.
+    fn handle_copy_request(&mut self, ctx: &egui::Context) {
+        let State::Ready(session) = &mut self.state else { return };
+        if let Some(text) = session.copy_request.take() {
+            self.clipboard.copy(ctx, &text);
+            self.notice = Some(Notice { text: format!("Copied {text}"), until: Instant::now() + COPIED_NOTICE_TIME });
         }
     }
 
@@ -255,9 +300,14 @@ impl App {
                                 None => line += &format!(" | {id}=black"),
                             }
                         }
+                        line += &format!(" | goto={}", if session.goto.is_some() { "open" } else { "closed" });
+                        if let Some(fake) = &self.clipboard.fake {
+                            line += &format!(" | clipboard={fake}");
+                        }
                         println!("{line}");
                     }
                 }
+                selftest::Action::Clipboard(text) => self.clipboard.fake = Some(text),
                 selftest::Action::Quit => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
                 _ => {}
             }
@@ -330,6 +380,7 @@ impl eframe::App for App {
             };
             controls::show(ui, session, clock.as_ref());
         });
+        self.handle_copy_request(&ctx);
 
         let mut next_due = None;
         let grid_area = egui::CentralPanel::no_frame()
@@ -364,6 +415,7 @@ impl eframe::App for App {
         }
         if let State::Ready(session) = &mut self.state {
             picker::show(&ctx, session, &self.renderer);
+            goto::show(&ctx, session);
         }
 
         // Ask for the next refresh. While paused, nothing is drawn until an

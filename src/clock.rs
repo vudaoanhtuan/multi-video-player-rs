@@ -9,7 +9,7 @@ use std::time::Instant;
 use crate::time::Timestamp;
 
 /// Playback speeds offered by the speed menu.
-pub const SPEEDS: [f64; 7] = [0.25, 0.5, 1.0, 2.0, 4.0, 8.0, 16.0];
+pub const SPEEDS: [f64; 5] = [1.0, 2.0, 4.0, 8.0, 16.0];
 pub const DEFAULT_SPEED: f64 = 1.0;
 
 /// The clock state at one moment.

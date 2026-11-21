@@ -87,25 +87,50 @@ impl fmt::Debug for Timestamp {
     }
 }
 
-/// Parses a time of day typed by the user: `HH:mm:ss` or `HH:mm`.
-/// Returns microseconds since midnight.
+/// Parses a time of day from the user: `HH:mm:ss`, `HH:mm`, or `HHmmss`.
+/// Space at the two ends is ignored. Returns microseconds since midnight.
 pub fn parse_time_of_day(text: &str) -> Option<Micros> {
-    let parts: Vec<&str> = text.trim().split(':').collect();
-    if parts.len() != 2 && parts.len() != 3 {
-        return None;
-    }
+    let text = text.trim();
     let mut fields = [0i64; 3];
-    for (i, part) in parts.iter().enumerate() {
-        if part.is_empty() || part.len() > 2 || !part.bytes().all(|c| c.is_ascii_digit()) {
+    if text.len() == 6 && text.bytes().all(|c| c.is_ascii_digit()) {
+        // `HHmmss`, the form used in the file names.
+        for (i, field) in fields.iter_mut().enumerate() {
+            *field = text[i * 2..i * 2 + 2].parse().ok()?;
+        }
+    } else {
+        let parts: Vec<&str> = text.split(':').collect();
+        if parts.len() != 2 && parts.len() != 3 {
             return None;
         }
-        fields[i] = part.parse().ok()?;
+        for (i, part) in parts.iter().enumerate() {
+            if part.is_empty() || part.len() > 2 || !part.bytes().all(|c| c.is_ascii_digit()) {
+                return None;
+            }
+            fields[i] = part.parse().ok()?;
+        }
     }
     let [h, m, s] = fields;
     if h > 23 || m > 59 || s > 59 {
         return None;
     }
     Some((h * 3600 + m * 60 + s) * MICROS_PER_SEC)
+}
+
+/// Parses a time of day from a paste or from the clipboard. Only the full
+/// forms are valid: `HH:mm:ss` with two digits in each part, or `HHmmss`.
+/// Space at the two ends is ignored. Returns microseconds since midnight.
+///
+/// This is more strict than [`parse_time_of_day`]. Text in the clipboard
+/// can be anything, and a short text such as `9:05` is possibly not a time.
+pub fn parse_pasted_time_of_day(text: &str) -> Option<Micros> {
+    let text = text.trim();
+    let b = text.as_bytes();
+    let full_form = b.len() == 8 && b[2] == b':' && b[5] == b':';
+    let compact_form = b.len() == 6 && b.iter().all(u8::is_ascii_digit);
+    if !full_form && !compact_form {
+        return None;
+    }
+    parse_time_of_day(text)
 }
 
 /// Turns a typed time of day into a jump target inside `start..=end`.
@@ -209,8 +234,29 @@ mod tests {
         assert_eq!(parse_time_of_day("21:45:10"), Some((21 * 3600 + 45 * 60 + 10) * MICROS_PER_SEC));
         assert_eq!(parse_time_of_day(" 21:45 "), Some((21 * 3600 + 45 * 60) * MICROS_PER_SEC));
         assert_eq!(parse_time_of_day("9:05"), Some((9 * 3600 + 5 * 60) * MICROS_PER_SEC));
-        for bad in ["", "21", "24:00", "21:60", "21:45:60", "ab:cd", "21:45:10:00", "21::10", "-1:00"] {
+        // The compact form of the file names.
+        assert_eq!(parse_time_of_day("214510"), parse_time_of_day("21:45:10"));
+        assert_eq!(parse_time_of_day(" 000000\n"), Some(0));
+        for bad in [
+            "", "21", "24:00", "21:60", "21:45:60", "ab:cd", "21:45:10:00", "21::10", "-1:00", "2145", "21451",
+            "2145100", "246000", "216010", "214560", "21451x", "20261019T214510",
+        ] {
             assert_eq!(parse_time_of_day(bad), None, "{bad}");
+        }
+    }
+
+    #[test]
+    fn pasted_time_must_have_a_full_form() {
+        let expected = Some((21 * 3600 + 45 * 60 + 10) * MICROS_PER_SEC);
+        assert_eq!(parse_pasted_time_of_day("21:45:10"), expected);
+        assert_eq!(parse_pasted_time_of_day("214510"), expected);
+        assert_eq!(parse_pasted_time_of_day("  21:45:10\n"), expected);
+        assert_eq!(parse_pasted_time_of_day("00:00:00"), Some(0));
+        for bad in [
+            "", "21:45", "9:05", "9:05:00", "9:05:0", "1:2:03", "21:5:10", "21:45:1", "2145", "21451", "2145100", "24:00:00", "21:60:00",
+            "21:45:60", "246000", "21-45-10", "21:45:10.5", "at 21:45:10", "20261019T214510", "hello",
+        ] {
+            assert_eq!(parse_pasted_time_of_day(bad), None, "{bad}");
         }
     }
 

@@ -1,18 +1,17 @@
 //! The control bar: play/pause, timer, progress bar, speed menu, cameras button.
 //! See `specs/controls-and-layout.md`.
 
-use egui::{Align, Color32, FontId, Key, Layout, Rect, RichText, Sense, Stroke, StrokeKind, Ui};
+use egui::{Align, Color32, FontId, Layout, Rect, RichText, Sense, Stroke, StrokeKind, Ui};
 
-use super::session::{Session, TimerEdit};
+use super::session::Session;
 use crate::clock::{Snapshot, SPEEDS};
-use crate::time::{parse_time_of_day, resolve_time_of_day, Timestamp};
+use crate::time::Timestamp;
 
 const BAR_HEIGHT: f32 = 44.0;
 const BUTTON_HEIGHT: f32 = 28.0;
 const TIMER_WIDTH: f32 = 84.0;
 const MARKER_RADIUS: f32 = 6.5;
 const ACCENT: Color32 = Color32::from_rgb(76, 148, 255);
-const INVALID: Color32 = Color32::from_rgb(235, 80, 80);
 const NO_TIME: &str = "--:--:--";
 
 pub fn speed_label(speed: f64) -> String {
@@ -90,68 +89,14 @@ fn play_button(ui: &mut Ui, playing: bool) -> egui::Response {
     response.on_hover_text(if playing { "Pause (Space)" } else { "Play (Space)" })
 }
 
-/// The clock time. A click changes it into a text box for a jump.
+/// The clock time. It cannot be edited. A click copies the time and pauses playback.
 fn timer(ui: &mut Ui, session: &mut Session, clock: &Snapshot) {
     // During a drag on the progress bar, show the time under the pointer.
-    let shown_time = session.scrub.target.unwrap_or(clock.time);
-    let Some(edit) = session.timer_edit.as_mut() else {
-        let text = RichText::new(shown_time.format_hms()).monospace().strong();
-        let button = ui.add_sized([TIMER_WIDTH, BUTTON_HEIGHT], egui::Button::new(text));
-        if button.on_hover_text("Click to type a time").clicked() {
-            session.timer_edit = Some(TimerEdit { text: shown_time.format_hms(), invalid: false, focused: false });
-        }
-        return;
-    };
-
-    let mut text_edit = egui::TextEdit::singleline(&mut edit.text)
-        .font(egui::TextStyle::Monospace)
-        .align(egui::Align2::CENTER_CENTER)
-        .desired_width(TIMER_WIDTH - 8.0);
-    if edit.invalid {
-        text_edit = text_edit.text_color(INVALID);
-    }
-    let output = ui.allocate_ui(egui::vec2(TIMER_WIDTH, BUTTON_HEIGHT), |ui| {
-        ui.centered_and_justified(|ui| text_edit.show(ui)).inner
-    });
-    let mut output = output.inner;
-    let response = output.response.clone();
-    if edit.invalid {
-        ui.painter().rect_stroke(response.rect, 2.0, Stroke::new(1.5, INVALID), StrokeKind::Outside);
-    }
-    if !edit.focused {
-        // First frame: take the keyboard focus and select the text, so the
-        // user can type a new time immediately.
-        edit.focused = true;
-        response.request_focus();
-        let all = egui::text::CCursorRange::two(
-            egui::text::CCursor::new(0),
-            egui::text::CCursor::new(edit.text.chars().count()),
-        );
-        output.state.cursor.set_char_range(Some(all));
-        output.state.store(ui.ctx(), response.id);
-        return;
-    }
-    if response.changed() {
-        edit.invalid = false;
-    }
-    if response.lost_focus() {
-        if ui.input(|i| i.key_pressed(Key::Enter)) {
-            match parse_time_of_day(&edit.text) {
-                Some(time_of_day) => {
-                    let target = resolve_time_of_day(time_of_day, session.library.start, session.library.end);
-                    session.timer_edit = None;
-                    session.jump(target);
-                }
-                None => {
-                    // Not a time: keep the box open and mark it in red.
-                    edit.invalid = true;
-                    response.request_focus();
-                }
-            }
-        } else {
-            // Escape, or a click outside the box: close with no jump.
-            session.timer_edit = None;
-        }
+    let text = session.scrub.target.unwrap_or(clock.time).format_hms();
+    let label = RichText::new(text).monospace().strong();
+    let button = ui.add_sized([TIMER_WIDTH, BUTTON_HEIGHT], egui::Button::new(label));
+    if button.on_hover_text("Click or press T to copy the time and pause. Press G to go to a time.").clicked() {
+        session.copy_time_and_pause();
     }
 }
 

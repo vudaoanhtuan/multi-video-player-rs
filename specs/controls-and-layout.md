@@ -38,7 +38,7 @@ The control bar is one row at the bottom of the window. From left to right:
 | Item | Use |
 |---|---|
 | Play/pause button | Starts and stops the clock. |
-| Timer | Shows the clock time. A click on it lets the user type a time to jump to. |
+| Timer | Shows the clock time. A click on it copies the time and pauses playback. |
 | Progress bar | Shows the clock position in the total time range. Takes all spare width. |
 | Speed menu | Sets the playback speed. |
 | Cameras button | Opens the camera picker dialog. |
@@ -52,13 +52,30 @@ The control bar is one row at the bottom of the window. From left to right:
 ## Timer
 
 - Show the clock time as `HH:mm:ss`. Update it at least 4 times each second while playing.
-- A click on the timer changes it into a text box that contains the current time.
-- The text box accepts a time as `HH:mm:ss` or `HH:mm`. The Enter key starts the jump and closes the text box.
-- The Escape key, or a click outside the text box, closes it with no jump.
-- Playback continues while the text box is open.
+- The user cannot edit the timer.
+- A click on the timer, or the T key, does two things:
+  - If the clock is playing, it pauses the clock.
+  - It copies the clock time to the clipboard as `HH:mm:ss`, and shows a short "copied" message.
+- The copied time is the time at which the clock stopped, so it is the time on the screen.
+
+## Go to a time
+
+- A typed time is valid in these forms: `HH:mm:ss`, `HH:mm`, `HHmmss`.
+- A pasted time and a clipboard time are valid only in the full forms: `HH:mm:ss` with two digits in each part, or `HHmmss`. For example, `21:45` and `9:05:00` are not valid.
+- Space at the two ends is ignored.
+
+- The G key opens the "go to time" dialog. The dialog appears on top of the grid.
+- The dialog has a text box that contains the current clock time, and "OK" and "Cancel" buttons.
+  - OK starts the jump and closes the dialog. The Enter key does the same.
+  - Cancel closes the dialog with no jump. The Escape key and a click outside the dialog do the same.
+  - Text that is not a time, then OK: mark the text box in red, keep the dialog open, and do not change the clock.
+- A paste while the dialog is open does not go into the text box.
+  - The pasted text is a valid time: close the dialog and jump.
+  - The pasted text is not a valid time: do nothing. The text box does not change.
+- Shift + G reads the clipboard. If the clipboard text is a valid time, jump to it with no dialog. If not, nothing happens.
+- Playback continues while the dialog is open.
 - A time before the range start jumps to the range start. A time after the range end jumps to the range end.
-- Text that is not a time: mark the text box in red, keep it open, and do not change the clock.
-- If the range passes midnight, a typed time before the range start time of day means the next day.
+- If the range passes midnight, a time before the range start time of day means the next day.
 
 ## Progress bar
 
@@ -72,7 +89,7 @@ The control bar is one row at the bottom of the window. From left to right:
 
 ## Playback speed
 
-- A menu with these speeds: 0.25x, 0.5x, 1x, 2x, 4x, 8x, 16x.
+- A menu with these speeds: 1x, 2x, 4x, 8x, 16x.
 - The default is 1x after each folder open.
 - A speed change applies immediately, in play or in pause.
 
@@ -100,7 +117,7 @@ The control bar is one row at the bottom of the window. From left to right:
 - One camera only: the tile fills the grid.
 - Many cameras (for example 16): tiles get small but stay readable. Do not add scroll bars to the grid.
 - No folder open: show an "open a folder" message with an open button in the grid area, and disable the control bar.
-- While a text box or the dialog has the keyboard focus, the space, C, and arrow keys do not control playback.
+- While a text box or a dialog has the keyboard focus, the space, C, G, T, and arrow keys do not control playback.
 
 ## Done when
 
@@ -110,6 +127,12 @@ The control bar is one row at the bottom of the window. From left to right:
 - Two checkboxes set to off plus OK leaves 3 tiles, and the tiles fill the grid space.
 - Checkbox changes plus Cancel leaves the grid unchanged.
 - A click at the middle of the progress bar sets the clock to the middle of the total time range.
-- A click on the timer, the text `21:45:10`, and Enter sets the clock to 21:45:10 and all tiles update.
+- The G key, the text `21:45:10`, and Enter sets the clock to 21:45:10 and all tiles update.
+- A paste of `214510` in the "go to time" dialog closes the dialog and sets the clock to 21:45:10.
+- A paste of text that is not a time leaves the dialog open and the text box unchanged.
+- Shift + G with `21:45:10` in the clipboard sets the clock to 21:45:10. With other text in the clipboard, the clock does not change.
+- A paste of `21:45` in the "go to time" dialog does nothing. The typed text `21:45` and Enter sets the clock to 21:45:00.
+- A click on the timer while playing pauses playback and puts the clock time in the clipboard. The T key does the same.
+- The speed menu shows 1x, 2x, 4x, 8x, 16x.
 - A speed of 4x moves the shown time 4 seconds for each real second.
 - The time labels at the two ends of the bar equal the earliest start and the latest end in the folder.

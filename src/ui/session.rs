@@ -8,7 +8,7 @@ use crate::library::Library;
 use crate::media::DecodeOptions;
 use crate::playback::{CameraPlayer, Waker};
 use crate::render::{TileSurface, VideoRenderer};
-use crate::time::{Timestamp, MICROS_PER_SEC};
+use crate::time::{resolve_time_of_day, Micros, Timestamp, MICROS_PER_SEC};
 
 /// Time between tile updates during a drag on the progress bar: about 10 each second.
 const SCRUB_INTERVAL: Duration = Duration::from_millis(100);
@@ -23,12 +23,12 @@ pub struct Tile {
     pub surface: TileSurface,
 }
 
-/// The text box that replaces the timer after a click.
-pub struct TimerEdit {
+/// The "go to time" dialog.
+pub struct GotoDialog {
     pub text: String,
-    /// The text is not a time. The box is shown in red.
+    /// The text is not a time. The text box is shown in red.
     pub invalid: bool,
-    /// The box got the keyboard focus on its first frame.
+    /// The text box got the keyboard focus on its first frame.
     pub focused: bool,
 }
 
@@ -48,7 +48,10 @@ pub struct Session {
     pub shown: Vec<bool>,
     /// Shown cameras in camera id order.
     pub tiles: Vec<Tile>,
-    pub timer_edit: Option<TimerEdit>,
+    /// The open "go to time" dialog.
+    pub goto: Option<GotoDialog>,
+    /// Text that the user asked to copy. The app moves it to the clipboard.
+    pub copy_request: Option<String>,
     /// Checkbox values of the open camera picker dialog.
     pub picker: Option<Vec<bool>>,
     pub scrub: Scrub,
@@ -66,7 +69,8 @@ impl Session {
             library,
             clock,
             tiles: Vec::new(),
-            timer_edit: None,
+            goto: None,
+            copy_request: None,
             picker: None,
             scrub: Scrub::default(),
             opts,
@@ -119,6 +123,28 @@ impl Session {
     pub fn jump(&self, time: Timestamp) {
         self.clock.jump(time);
         self.wake_players();
+    }
+
+    /// Jumps to a time of day from the user. See [`resolve_time_of_day`]
+    /// for the range and midnight rules.
+    pub fn jump_to_time_of_day(&self, time_of_day: Micros) {
+        self.jump(resolve_time_of_day(time_of_day, self.library.start, self.library.end));
+    }
+
+    /// Pauses playback and asks for a copy of the clock time. The copied
+    /// time is the time at which the clock stopped, so it is the time on screen.
+    pub fn copy_time_and_pause(&mut self) {
+        if self.clock.snapshot().playing {
+            self.clock.pause();
+            self.wake_players();
+        }
+        self.copy_request = Some(self.clock.snapshot().time.format_hms());
+    }
+
+    /// Opens the "go to time" dialog with the current clock time in the text box.
+    pub fn open_goto(&mut self) {
+        let text = self.clock.snapshot().time.format_hms();
+        self.goto = Some(GotoDialog { text, invalid: false, focused: false });
     }
 
     pub fn jump_by(&self, delta: i64) {

@@ -7,8 +7,10 @@
 //!
 //! | Action | Argument | Result |
 //! |---|---|---|
-//! | `key` | egui key name, for example `Space` | Key press and release |
+//! | `key` | egui key name, for example `Space` or `Shift+G` | Key press and release |
 //! | `text` | text | Typed text |
+//! | `paste` | text | A paste of this text (Cmd+V) |
+//! | `clipboard` | text | Replaces the system clipboard with a test clipboard that holds this text |
 //! | `click` | `x,y` in window points | Pointer click |
 //! | `down`, `move`, `up` | `x,y` | Parts of a drag |
 //! | `shot` | file path | Writes the window picture as a PPM file |
@@ -23,8 +25,10 @@ use egui::{Event, Key, Modifiers, PointerButton, Pos2, RawInput};
 
 #[derive(Clone, Debug)]
 pub enum Action {
-    Key(Key),
+    Key(Modifiers, Key),
     Text(String),
+    Paste(String),
+    Clipboard(String),
     Down(Pos2),
     Move(Pos2),
     Up(Pos2),
@@ -35,7 +39,7 @@ pub enum Action {
 
 impl Action {
     fn is_input(&self) -> bool {
-        !matches!(self, Action::Shot(_) | Action::Stats | Action::Quit)
+        !matches!(self, Action::Shot(_) | Action::Stats | Action::Quit | Action::Clipboard(_))
     }
 }
 
@@ -58,8 +62,16 @@ impl Script {
                 Pos2::new(x.trim().parse().expect("script: bad x"), y.trim().parse().expect("script: bad y"))
             };
             match action {
-                "key" => steps.push((at, Action::Key(Key::from_name(argument).expect("script: unknown key")))),
+                "key" => {
+                    let (modifiers, name) = match argument.strip_prefix("Shift+") {
+                        Some(name) => (Modifiers::SHIFT, name),
+                        None => (Modifiers::NONE, argument),
+                    };
+                    steps.push((at, Action::Key(modifiers, Key::from_name(name).expect("script: unknown key"))));
+                }
                 "text" => steps.push((at, Action::Text(argument.to_owned()))),
+                "paste" => steps.push((at, Action::Paste(argument.to_owned()))),
+                "clipboard" => steps.push((at, Action::Clipboard(argument.to_owned()))),
                 "click" => {
                     steps.push((at, Action::Down(point())));
                     steps.push((at + 0.05, Action::Up(point())));
@@ -98,18 +110,13 @@ impl Script {
                 modifiers: Modifiers::NONE,
             };
             match action {
-                Action::Key(key) => {
+                Action::Key(modifiers, key) => {
                     for pressed in [true, false] {
-                        raw.events.push(Event::Key {
-                            key,
-                            physical_key: None,
-                            pressed,
-                            repeat: false,
-                            modifiers: Modifiers::NONE,
-                        });
+                        raw.events.push(Event::Key { key, physical_key: None, pressed, repeat: false, modifiers });
                     }
                 }
                 Action::Text(text) => raw.events.push(Event::Text(text)),
+                Action::Paste(text) => raw.events.push(Event::Paste(text)),
                 Action::Down(pos) => raw.events.extend([Event::PointerMoved(pos), button(pos, true)]),
                 Action::Move(pos) => raw.events.push(Event::PointerMoved(pos)),
                 Action::Up(pos) => raw.events.extend([Event::PointerMoved(pos), button(pos, false)]),

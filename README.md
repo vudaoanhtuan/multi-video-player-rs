@@ -42,7 +42,9 @@ The script makes `dist/Video Player.app`. The app is one executable of about 16 
 | Left / Right arrow | Jump 10 seconds back / forward |
 | C | Open the camera picker |
 | Cmd+O | Open a folder |
-| Click on the timer | Type a time (`HH:mm:ss` or `HH:mm`), then Enter |
+| G | Open the "go to time" dialog. Type or paste `HH:mm:ss` or `HHmmss` |
+| Shift+G | Jump to the time in the clipboard, if the clipboard text is `HH:mm:ss` or `HHmmss` |
+| T, or a click on the timer | Pause and copy the clock time |
 | Click or drag on the progress bar | Jump |
 
 ## Design
