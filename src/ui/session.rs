@@ -4,6 +4,7 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 
 use super::bbox::{BboxDialog, BboxMode};
+use super::settings::VideoRatio;
 use crate::clock::{Clock, DEFAULT_SPEED};
 use crate::library::Library;
 use crate::media::DecodeOptions;
@@ -148,7 +149,10 @@ impl Session {
 
     /// The user clicked a tile during the camera choice. Opens the dialog
     /// with the frame that this tile shows.
-    pub fn open_bbox_dialog(&mut self, ctx: &egui::Context, renderer: &VideoRenderer, tile: usize) {
+    ///
+    /// The picture in the dialog has the shape that the grid uses, so the
+    /// user draws on the same picture that the tile showed.
+    pub fn open_bbox_dialog(&mut self, ctx: &egui::Context, renderer: &VideoRenderer, tile: usize, ratio: VideoRatio) {
         self.pause();
         let Some(tile) = self.tiles.get(tile) else { return };
         let camera_id = self.library.cameras[tile.camera].camera_id.clone();
@@ -157,7 +161,8 @@ impl Session {
             self.message = Some(format!("{camera_id} has no video at this time"));
             return;
         };
-        match renderer.read_picture(frame) {
+        let aspect = ratio.apply(frame.format.display_aspect());
+        match renderer.read_picture(frame, Some(aspect)) {
             Some(picture) => {
                 let time = self.clock.snapshot().time;
                 self.bbox = BboxMode::Dialog(Box::new(BboxDialog::new(ctx, camera_id, time, picture)));

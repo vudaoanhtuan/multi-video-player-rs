@@ -10,12 +10,13 @@ use super::session::Session;
 use crate::time::Timestamp;
 
 const ACCENT: Color32 = Color32::from_rgb(76, 148, 255);
-/// A drag smaller than this, in video pixels, is not a selection.
+/// A drag smaller than this, in picture pixels, is not a selection.
 const MIN_SELECTION: u32 = 2;
 /// A small video is shown larger, but not more than this factor.
 const MAX_ZOOM: f32 = 2.0;
 
-/// A rectangle in video pixels. The origin is the top left corner of the frame.
+/// A rectangle in pixels of the picture in the dialog. The origin is the top
+/// left corner. With the 16:9 ratio setting, the picture is the stretched video.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct PixelRect {
     pub x: u32,
@@ -45,10 +46,10 @@ impl PixelRect {
 pub struct BboxDialog {
     pub camera_id: Arc<str>,
     pub time: Timestamp,
-    /// The frame at the full size of the video.
+    /// The frame with the height of the video and the shape that the grid uses.
     pub picture: egui::ColorImage,
     texture: egui::TextureHandle,
-    /// Where the current drag started, in video pixels.
+    /// Where the current drag started, in picture pixels.
     drag_start: Option<Pos2>,
     pub selection: Option<PixelRect>,
     /// The selection that was copied last.

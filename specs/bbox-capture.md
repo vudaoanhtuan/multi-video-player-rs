@@ -30,15 +30,18 @@ Let the user copy a rectangle area of one camera frame to the clipboard as a pic
 ## Frame dialog
 
 - The dialog appears on top of the grid. It shows the camera id, the clock time, and the frame that the tile showed at the click.
-- The frame keeps its shape. It is as large as the window permits. A small video is shown at not more than 2 times its size.
+- The frame has the shape that the grid uses. With the "16:9" video ratio setting, the dialog shows the stretched picture. With "None", it shows the shape of the video.
+- The picture keeps this shape in the dialog. It is as large as the window permits. A small video is shown at not more than 2 times its size.
 - The dialog has a "Close" button. The Escape key does the same. A click outside the dialog does not close it.
 - The user draws a rectangle on the frame with a press, a drag, and a release.
-  - During the drag, show the rectangle and its position and size in video pixels.
+  - During the drag, show the rectangle and its position and size in picture pixels.
   - At the release, copy the rectangle area to the clipboard as a picture. Show a "copied" text with the size.
   - The dialog stays open. The user can draw again. Each new rectangle replaces the clipboard content.
-- The copied picture has the full resolution of the video. It does not depend on the size of the dialog.
+- The picture has the height of the video. The width follows from the shape: a 1440 x 1080 video gives a 1920 x 1080 picture with the "16:9" setting, and a 1440 x 1080 picture with "None".
+- The copied area is cut from this picture, so it does not depend on the size of the dialog. With the "16:9" setting, the copied area is stretched in the same way as the picture on the screen.
+- Positions and sizes are in pixels of this picture.
 - The rectangle is limited to the frame. A drag that ends outside the frame gives a rectangle that stops at the frame edge.
-- A rectangle smaller than 2 x 2 video pixels is not a selection. Nothing is copied.
+- A rectangle smaller than 2 x 2 picture pixels is not a selection. Nothing is copied.
 - While the dialog is open, the other keys (space, arrows, C, G, T, F) do nothing.
 
 ## Edge cases and errors
@@ -51,6 +54,7 @@ Let the user copy a rectangle area of one camera frame to the clipboard as a pic
 - The scissors button while playing pauses playback and shows the instruction on the grid.
 - The tile under the pointer has a highlight border during the camera choice.
 - A click on a tile opens the dialog with the frame of that camera.
-- A drawn rectangle of 400 x 200 video pixels puts a picture of 400 x 200 pixels in the clipboard.
+- A drawn rectangle of 400 x 200 picture pixels puts a picture of 400 x 200 pixels in the clipboard.
+- With the "16:9" setting, the dialog for a 1440 x 1080 video shows a 1920 x 1080 picture.
 - The picture shows the same content as the rectangle on the screen.
 - Close and Escape close the dialog. Playback stays paused.

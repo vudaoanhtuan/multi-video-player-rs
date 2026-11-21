@@ -10,6 +10,7 @@ mod picker;
 #[cfg(feature = "selftest")]
 mod selftest;
 mod session;
+mod settings;
 
 use std::path::PathBuf;
 use std::sync::mpsc::{self, Receiver};
@@ -63,6 +64,7 @@ pub struct App {
     _menu: Option<AppMenu>,
     state: State,
     notice: Option<Notice>,
+    settings: settings::Settings,
     clipboard: clipboard::Clipboard,
     /// Shift+G asked for the clipboard text. A valid time in it starts a jump.
     clipboard_jump: bool,
@@ -116,6 +118,7 @@ impl App {
             _menu: menu,
             state: State::NoFolder,
             notice: None,
+            settings: settings::Settings::default(),
             clipboard: clipboard::Clipboard::default(),
             clipboard_jump: false,
             last_refresh: Instant::now(),
@@ -332,6 +335,7 @@ impl App {
                         let clock = session.clock.snapshot();
                         let ms = |t: crate::time::Timestamp| format!("{}.{:03}", t.format_hms(), t.time_of_day() / 1000 % 1000);
                         let mut line = format!("stats clock={} playing={} speed={}", ms(clock.time), clock.playing, clock.speed);
+                        line += &format!(" ratio={}", self.settings.video_ratio.label());
                         for tile in &session.tiles {
                             let id = &session.library.cameras[tile.camera].camera_id;
                             match tile.player.frame_time() {
@@ -435,12 +439,13 @@ impl eframe::App for App {
                 State::Ready(session) => Some(&mut **session),
                 _ => None,
             };
-            bar_action = controls::show(ui, session, clock.as_ref(), can_close);
+            bar_action = controls::show(ui, session, clock.as_ref(), can_close, &self.settings);
         });
         self.handle_copy_request(&ctx);
         match bar_action {
             Some(controls::BarAction::OpenFolder) => want_open = true,
             Some(controls::BarAction::CloseFolder) => self.close_folder(),
+            Some(controls::BarAction::SetVideoRatio(ratio)) => self.settings.video_ratio = ratio,
             None => {}
         }
         // The session can be gone now. Do not use the clock of a closed session.
@@ -454,7 +459,7 @@ impl eframe::App for App {
                     State::Ready(session) => {
                         // Use the clock value of this refresh for all tiles, so all tiles show the same time.
                         let clock = clock.as_ref().expect("a session has a clock");
-                        next_due = grid::show(ui, session, clock, &self.renderer);
+                        next_due = grid::show(ui, session, clock, &self.renderer, self.settings.video_ratio);
                     }
                     State::NoFolder => {
                         want_open |= Self::message(ui, "Open a folder of camera recordings", None, true, false);

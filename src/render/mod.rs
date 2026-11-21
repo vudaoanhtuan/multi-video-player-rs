@@ -310,14 +310,20 @@ impl VideoRenderer {
     /// of the video. The GPU does the conversion with the same shader that
     /// draws the tiles, so the picture has the colors that are on screen.
     ///
+    /// `aspect` is the shape (width / height) of the picture. `None` keeps the
+    /// shape of the video. The picture has the height of the video, and the
+    /// width follows from the shape, so a different shape stretches the video
+    /// in the same way as a tile does.
+    ///
     /// This waits for the GPU. Use it for a single frame, not during playback.
-    pub fn read_picture(&self, frame: &Arc<VideoFrame>) -> Option<egui::ColorImage> {
+    pub fn read_picture(&self, frame: &Arc<VideoFrame>, aspect: Option<f32>) -> Option<egui::ColorImage> {
         let mut tile = self.new_tile();
         let draw = self.prepare(&mut tile, Some(frame))?;
 
-        // Square pixels: a video with pixels that are not square is made wider or narrower.
+        // The pixels of the picture are square. A video with pixels that are
+        // not square is made wider or narrower.
         let height = frame.format.height;
-        let width = (height as f32 * draw.display_aspect).round() as u32;
+        let width = (height as f32 * aspect.unwrap_or(draw.display_aspect)).round() as u32;
         let limit = self.device.limits().max_texture_dimension_2d;
         if width == 0 || height == 0 || width > limit || height > limit {
             return None;

@@ -28,7 +28,10 @@ The window shows only two parts: the camera grid and the control bar. There is n
 - One tile per shown camera, in camera id order.
 - Use a grid that is close to square: `columns = round up(square root of shown camera count)`.
 - All tiles have the same size. The grid fills the space above the control bar and changes with the window size.
-- Keep the shape of the video inside the tile. Fill the unused tile area with black.
+- The shape of the video inside the tile follows the "video ratio" setting (see "Settings"):
+  - "16:9": stretch each video to 16:9. A video that is not 16:9 gets wider or narrower. Nothing is cut.
+  - "None": keep the shape of the video.
+- Fill the unused tile area with black.
 - Show the camera id as a small label in a corner of each tile.
 
 ## Control bar
@@ -43,7 +46,7 @@ The control bar is one row at the bottom of the window. From left to right:
 | Speed menu | Sets the playback speed. |
 | Bbox button | A button with a scissors icon. Starts the bbox capture. See [bbox-capture.md](bbox-capture.md). |
 | Cameras button | A button with a camera icon and the count of shown cameras. Opens the camera picker dialog. |
-| Menu button | A button with three vertical dots, at the right end. Opens a menu with "Open Folder…" and "Close Folder". |
+| Menu button | A button with three vertical dots, at the right end. Opens a menu with "Open Folder…", "Close Folder", and "Settings". |
 
 ## Play and pause
 
@@ -122,6 +125,15 @@ The control bar is one row at the bottom of the window. From left to right:
 - "Close Folder" is disabled when no folder is open.
 - The menu button is always enabled, also when the control bar is disabled. The user needs it to open a folder.
 
+## Settings
+
+- The menu of the menu button has a "Settings" entry that opens a second menu.
+- "Video ratio" has two options. Exactly one is selected: "None" and "16:9".
+- The default is "16:9" at each start of the app.
+- A change applies immediately to all tiles, in play or in pause.
+- The setting does not change the decode, the clock, or the frame that a tile shows. The stretch is done when the frame is drawn.
+- The setting stays when the user closes a folder or opens a different folder.
+
 ## Audio
 
 - There is no audio and no volume control.
@@ -148,6 +160,7 @@ The control bar is one row at the bottom of the window. From left to right:
 - A paste of `21:45` in the "go to time" dialog does nothing. The typed text `21:45` and Enter sets the clock to 21:45:00.
 - A click on the timer while playing pauses playback and puts the clock time in the clipboard. The T key does the same.
 - The speed menu shows 1x, 2x, 4x, 8x, 16x.
+- With the default setting, a 4:3 video fills a 16:9 area in its tile. With "None", the same video is shown as 4:3.
 - "Close Folder" in the menu while playing shows the "open a folder" message and disables the control bar. The menu button still works.
 - "Open Folder…" in the menu, with no folder open, opens a folder. All cameras are shown and the state is paused.
 - A speed of 4x moves the shown time 4 seconds for each real second.

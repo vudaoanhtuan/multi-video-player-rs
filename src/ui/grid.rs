@@ -3,6 +3,7 @@
 use egui::{Align2, Color32, FontId, Rect, Ui};
 
 use super::session::Session;
+use super::settings::VideoRatio;
 use crate::clock::Snapshot;
 use crate::render::VideoRenderer;
 use crate::time::Timestamp;
@@ -39,7 +40,13 @@ pub fn fit_rect(aspect: f32, area: Rect) -> Rect {
 }
 
 /// Draws all tiles. Returns the earliest time at which a tile must change.
-pub fn show(ui: &mut Ui, session: &mut Session, clock: &Snapshot, renderer: &VideoRenderer) -> Option<Timestamp> {
+pub fn show(
+    ui: &mut Ui,
+    session: &mut Session,
+    clock: &Snapshot,
+    renderer: &VideoRenderer,
+    ratio: VideoRatio,
+) -> Option<Timestamp> {
     let area = ui.available_rect_before_wrap();
     ui.allocate_rect(area, egui::Sense::hover());
     let painter = ui.painter_at(area);
@@ -66,7 +73,8 @@ pub fn show(ui: &mut Ui, session: &mut Session, clock: &Snapshot, renderer: &Vid
             next_due = Some(next_due.map_or(due, |d| d.min(due)));
         }
         if let Some(draw) = renderer.prepare(&mut tile.surface, tile.player.frame()) {
-            painter.add(renderer.paint_callback(fit_rect(draw.display_aspect, rect), &draw));
+            // The ratio setting can stretch the video. The GPU does this when it draws.
+            painter.add(renderer.paint_callback(fit_rect(ratio.apply(draw.display_aspect), rect), &draw));
         }
 
         // Camera id label in the top left corner.
@@ -108,7 +116,7 @@ pub fn show(ui: &mut Ui, session: &mut Session, clock: &Snapshot, renderer: &Vid
         painter.galley(pill.min + egui::vec2(10.0, 5.0), galley, Color32::WHITE);
     }
     if let Some(tile) = picked {
-        session.open_bbox_dialog(ui.ctx(), renderer, tile);
+        session.open_bbox_dialog(ui.ctx(), renderer, tile, ratio);
     }
     next_due
 }
