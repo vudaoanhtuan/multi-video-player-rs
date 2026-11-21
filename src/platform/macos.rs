@@ -122,6 +122,13 @@ impl HwFrameImporter for IoSurfaceImporter {
     }
 }
 
+/// The system command that opens a file with its default app.
+pub fn browser_command(file: &std::path::Path) -> std::process::Command {
+    let mut command = std::process::Command::new("open");
+    command.arg(file);
+    command
+}
+
 pub struct NativeMenu {
     _menu: Menu,
 }

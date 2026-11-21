@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Video Player user manual</title>
+<!--
+  The "Help" entry of the app menu opens this file in the web browser.
+  The file is part of the executable. Change this file to change the manual.
+  A unit test in src/ui/help.rs checks that each hotkey is in the hotkey table.
+-->
+<style>
+  body { font-family: -apple-system, "Segoe UI", sans-serif; max-width: 760px; margin: 32px auto; padding: 0 16px; line-height: 1.5; background: #1b1b1b; color: #dcdcdc; }
+  h1, h2 { color: #ffffff; }
+  table { border-collapse: collapse; }
+  th, td { text-align: left; padding: 4px 14px 4px 0; vertical-align: top; }
+  kbd { font-family: ui-monospace, Menlo, monospace; background: #3c3c3c; border-radius: 4px; padding: 1px 6px; }
+  code { font-family: ui-monospace, Menlo, monospace; }
+</style>
+</head>
+<body>
+
+<h1>Video Player user manual</h1>
+<p>Video Player opens a folder of camera recordings and plays all cameras at the same time of day.</p>
+
+<h2>Hotkeys</h2>
+<table>
+  <tr><th>Key</th><th>Function</th></tr>
+  <tr><td><kbd>Space</kbd></td><td>Play or pause</td></tr>
+  <tr><td><kbd>Left</kbd> / <kbd>Right</kbd></td><td>Jump 10 seconds back or forward</td></tr>
+  <tr><td><kbd>G</kbd></td><td>Open the "Go to time" dialog</td></tr>
+  <tr><td><kbd>Shift</kbd> + <kbd>G</kbd></td><td>Jump to the time in the clipboard</td></tr>
+  <tr><td><kbd>T</kbd></td><td>Pause and copy the clock time</td></tr>
+  <tr><td><kbd>C</kbd></td><td>Open the camera picker</td></tr>
+  <tr><td><kbd>F</kbd></td><td>Start or stop the bbox capture</td></tr>
+  <tr><td><kbd>Enter</kbd></td><td>OK in a dialog</td></tr>
+  <tr><td><kbd>Esc</kbd></td><td>Cancel or close a dialog, or stop the camera choice of the bbox capture</td></tr>
+  <tr><td><kbd>Cmd</kbd> + <kbd>O</kbd></td><td>Open a folder (<kbd>Ctrl</kbd> + <kbd>O</kbd> on Windows)</td></tr>
+</table>
+<p>The hotkeys do not work while a dialog is open or while you type in a text box.</p>
+
+<h2>Open and close a folder</h2>
+<ul>
+  <li>To open a folder, use "Open Folder…" in the menu button (three dots) or press <kbd>Cmd</kbd> + <kbd>O</kbd>.</li>
+  <li>The app reads the files directly in the folder. It does not read folders inside the folder.</li>
+  <li>A file name must have this form: <code>camera-id_yyyyMMddTHHmmss.mkv</code>. Example: <code>floor-1-camera-2_20261019T213000.mkv</code>. The time is the start time of the recording.</li>
+  <li>The app skips files with a different name and files that it cannot read. It shows the number of skipped files.</li>
+  <li>After a folder opens, all cameras are shown and playback is paused at the earliest time.</li>
+  <li>"Close Folder" in the menu button stops playback and closes all files.</li>
+</ul>
+<p>The app only reads the video files. It does not change, move, or delete them. It does not play sound.</p>
+
+<h2>Camera grid</h2>
+<ul>
+  <li>Each shown camera has one tile. The camera id is in the top left corner of the tile.</li>
+  <li>All tiles show the same time of day. This time is the clock time.</li>
+  <li>A tile is black when its camera has no recording at the clock time. The other cameras continue.</li>
+  <li>A tile is also black for a moment after a jump, until the correct frame is ready.</li>
+</ul>
+
+<h2>Control bar</h2>
+<table>
+  <tr><th>Item</th><th>Function</th></tr>
+  <tr><td>Play/pause button</td><td>Starts and stops the clock. At the end of the range, play starts again from the start.</td></tr>
+  <tr><td>Timer</td><td>Shows the clock time. A click pauses playback and copies the time.</td></tr>
+  <tr><td>Progress bar</td><td>Shows the clock position between the earliest and the latest time in the folder. Click or drag to jump. The pointer shows the time at its position.</td></tr>
+  <tr><td>Speed menu</td><td>Sets the playback speed: 1x, 2x, 4x, 8x, 16x.</td></tr>
+  <tr><td>Scissors button</td><td>Starts the bbox capture.</td></tr>
+  <tr><td>Camera button</td><td>Opens the camera picker. The numbers show how many cameras are shown, for example 3/5.</td></tr>
+  <tr><td>Menu button</td><td>Open Folder, Close Folder, Settings, Help.</td></tr>
+</table>
+<p>At 8x and 16x the app can show key frames only, so the picture changes in steps. The clock speed stays correct.</p>
+
+<h2>Go to a time</h2>
+<ol>
+  <li>Press <kbd>G</kbd>. The "Go to time" dialog opens with the clock time.</li>
+  <li>Type a time as <code>HH:mm:ss</code>, <code>HH:mm</code>, or <code>HHmmss</code>.</li>
+  <li>Press <kbd>Enter</kbd> or click OK. Press <kbd>Esc</kbd> or click Cancel to close the dialog with no jump.</li>
+</ol>
+<ul>
+  <li>You can also paste a time in the dialog. A pasted time must be <code>HH:mm:ss</code> or <code>HHmmss</code>. A correct time starts the jump immediately. Other text is ignored.</li>
+  <li><kbd>Shift</kbd> + <kbd>G</kbd> jumps to the time in the clipboard with no dialog. If the clipboard does not hold a time as <code>HH:mm:ss</code> or <code>HHmmss</code>, nothing happens.</li>
+  <li>A time before the earliest time jumps to the earliest time. A time after the latest time jumps to the latest time.</li>
+  <li>If the recordings pass midnight, a time before the start time of day means the next day.</li>
+</ul>
+
+<h2>Copy the time</h2>
+<p>Click the timer or press <kbd>T</kbd>. Playback pauses, and the clock time goes to the clipboard as <code>HH:mm:ss</code>.</p>
+
+<h2>Choose the cameras</h2>
+<ol>
+  <li>Click the camera button or press <kbd>C</kbd>.</li>
+  <li>Set or clear the checkbox of each camera. "Select all" and "Select none" change all checkboxes.</li>
+  <li>Click OK or press <kbd>Enter</kbd> to apply. Click Cancel or press <kbd>Esc</kbd> to keep the cameras as they were.</li>
+</ol>
+<p>The app does not read the files of a hidden camera. A camera that you show again starts at the clock time.</p>
+
+<h2>Bbox capture</h2>
+<p>Bbox capture copies an area of one camera frame to the clipboard as a picture.</p>
+<ol>
+  <li>Click the scissors button or press <kbd>F</kbd>. Playback pauses.</li>
+  <li>Move the pointer to a camera. The tile under the pointer gets a blue border.</li>
+  <li>Click the camera. A dialog opens with the frame of that camera.</li>
+  <li>Draw a rectangle on the picture. When you release the pointer, the area goes to the clipboard.</li>
+  <li>Draw again to copy a different area, or click Close.</li>
+</ol>
+<ul>
+  <li>Before you click a camera, you can jump to a different time.</li>
+  <li>To stop the camera choice, press <kbd>Esc</kbd> or <kbd>F</kbd>, or click the scissors button again.</li>
+  <li>The picture has the shape that the grid uses. With the 16:9 video ratio, the picture and the copied area are stretched.</li>
+</ul>
+
+<h2>Settings</h2>
+<p>Open the menu button, then "Settings".</p>
+<table>
+  <tr><th>Setting</th><th>Option</th><th>Result</th></tr>
+  <tr><td>Video ratio</td><td>16:9</td><td>Each video is stretched to 16:9. This is the default.</td></tr>
+  <tr><td>Video ratio</td><td>None</td><td>Each video keeps its own shape.</td></tr>
+</table>
+<p>The setting returns to the default when the app starts.</p>
+
+</body>
+</html>

@@ -22,6 +22,23 @@ pub fn video_support(_device: &wgpu::Device) -> VideoSupport {
     VideoSupport { hw_decode, importer: None }
 }
 
+/// The system command that opens a file with its default app.
+pub fn browser_command(file: &std::path::Path) -> std::process::Command {
+    #[cfg(target_os = "windows")]
+    {
+        // `start` is a command of `cmd`. The empty text is the window title.
+        let mut command = std::process::Command::new("cmd");
+        command.args(["/C", "start", ""]).arg(file);
+        command
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        let mut command = std::process::Command::new("xdg-open");
+        command.arg(file);
+        command
+    }
+}
+
 pub fn install_app_menu(_on_command: Box<dyn Fn(MenuCommand) + Send + Sync>) -> Option<NativeMenu> {
     None
 }

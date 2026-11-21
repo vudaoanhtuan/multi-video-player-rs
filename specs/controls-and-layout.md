@@ -46,7 +46,7 @@ The control bar is one row at the bottom of the window. From left to right:
 | Speed menu | Sets the playback speed. |
 | Bbox button | A button with a scissors icon. Starts the bbox capture. See [bbox-capture.md](bbox-capture.md). |
 | Cameras button | A button with a camera icon and the count of shown cameras. Opens the camera picker dialog. |
-| Menu button | A button with three vertical dots, at the right end. Opens a menu with "Open Folder…", "Close Folder", and "Settings". |
+| Menu button | A button with three vertical dots, at the right end. Opens a menu with "Open Folder…", "Close Folder", "Settings", and "Help". |
 
 ## Play and pause
 
@@ -134,6 +134,18 @@ The control bar is one row at the bottom of the window. From left to right:
 - The setting does not change the decode, the clock, or the frame that a tile shows. The stretch is done when the frame is drawn.
 - The setting stays when the user closes a folder or opens a different folder.
 
+## Help
+
+- The menu of the menu button has a "Help" entry. It opens the user manual in the web browser that the user set as the default.
+- The manual explains each function of the app and has a table of all hotkeys.
+- The manual is one HTML file: `assets/help/manual.html`. It is part of the executable. To change the manual, change this file only.
+- The app does not show HTML itself. It writes a copy of the manual to the temporary folder of the system and asks the system to open that file.
+- Help is available in each state, also with no folder open.
+- Help does not change playback.
+- If the file cannot be written or opened, show a short message.
+- A key name in the manual uses the `kbd` tag.
+- When a hotkey or a function changes, change the manual in the same change.
+
 ## Audio
 
 - There is no audio and no volume control.
@@ -161,6 +173,7 @@ The control bar is one row at the bottom of the window. From left to right:
 - A click on the timer while playing pauses playback and puts the clock time in the clipboard. The T key does the same.
 - The speed menu shows 1x, 2x, 4x, 8x, 16x.
 - With the default setting, a 4:3 video fills a 16:9 area in its tile. With "None", the same video is shown as 4:3.
+- "Help" in the menu opens the manual in the web browser, with and without an open folder. The manual lists each hotkey of the app.
 - "Close Folder" in the menu while playing shows the "open a folder" message and disables the control bar. The menu button still works.
 - "Open Folder…" in the menu, with no folder open, opens a folder. All cameras are shown and the state is paused.
 - A speed of 4x moves the shown time 4 seconds for each real second.

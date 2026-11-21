@@ -6,6 +6,7 @@ mod clipboard;
 mod controls;
 mod goto;
 mod grid;
+mod help;
 mod picker;
 #[cfg(feature = "selftest")]
 mod selftest;
@@ -151,6 +152,23 @@ impl App {
         self.state = State::NoFolder;
         self.notice = None;
         self.clipboard_jump = false;
+    }
+
+    /// Opens the user manual in the web browser. Shows a message if that fails.
+    fn show_help(&mut self) {
+        // A scripted test must not open a browser on the computer of the user.
+        #[cfg(feature = "selftest")]
+        if self.script.is_some() {
+            match help::write_manual() {
+                Ok(path) => println!("help manual={}", path.display()),
+                Err(error) => println!("help error={error}"),
+            }
+            return;
+        }
+        if let Err(text) = help::open_manual() {
+            log::warn!("{text}");
+            self.notice = Some(Notice { text, until: Instant::now() + MESSAGE_NOTICE_TIME });
+        }
     }
 
     fn choose_folder(&mut self, ctx: &egui::Context) {
@@ -446,6 +464,7 @@ impl eframe::App for App {
             Some(controls::BarAction::OpenFolder) => want_open = true,
             Some(controls::BarAction::CloseFolder) => self.close_folder(),
             Some(controls::BarAction::SetVideoRatio(ratio)) => self.settings.video_ratio = ratio,
+            Some(controls::BarAction::ShowHelp) => self.show_help(),
             None => {}
         }
         // The session can be gone now. Do not use the clock of a closed session.

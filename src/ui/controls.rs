@@ -57,6 +57,7 @@ pub enum BarAction {
     OpenFolder,
     CloseFolder,
     SetVideoRatio(VideoRatio),
+    ShowHelp,
 }
 
 /// Shows the control bar. With no session, all items are shown disabled,
@@ -152,6 +153,10 @@ fn more_menu(ui: &mut Ui, can_close: bool, settings: &Settings) -> Option<BarAct
                 }
             }
         });
+        if ui.button("Help").clicked() {
+            action = Some(BarAction::ShowHelp);
+            ui.close();
+        }
     });
     action
 }
