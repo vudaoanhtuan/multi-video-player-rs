@@ -1,0 +1,167 @@
+//! One open folder: the library, the clock, and the shown cameras.
+
+use std::sync::Arc;
+use std::time::{Duration, Instant};
+
+use crate::clock::{Clock, DEFAULT_SPEED};
+use crate::library::Library;
+use crate::media::DecodeOptions;
+use crate::playback::{CameraPlayer, Waker};
+use crate::render::{TileSurface, VideoRenderer};
+use crate::time::{Timestamp, MICROS_PER_SEC};
+
+/// Time between tile updates during a drag on the progress bar: about 10 each second.
+const SCRUB_INTERVAL: Duration = Duration::from_millis(100);
+/// Jump of the left and right arrow keys.
+pub const ARROW_JUMP: i64 = 10 * MICROS_PER_SEC;
+
+/// One shown camera.
+pub struct Tile {
+    /// Index into `Library::cameras`.
+    pub camera: usize,
+    pub player: CameraPlayer,
+    pub surface: TileSurface,
+}
+
+/// The text box that replaces the timer after a click.
+pub struct TimerEdit {
+    pub text: String,
+    /// The text is not a time. The box is shown in red.
+    pub invalid: bool,
+    /// The box got the keyboard focus on its first frame.
+    pub focused: bool,
+}
+
+/// State of a press or drag on the progress bar.
+#[derive(Default)]
+pub struct Scrub {
+    /// Time under the pointer while the button is down.
+    pub target: Option<Timestamp>,
+    /// The last target that was sent to the clock.
+    sent: Option<(Timestamp, Instant)>,
+}
+
+pub struct Session {
+    pub library: Library,
+    pub clock: Arc<Clock>,
+    /// One flag for each camera of the library.
+    pub shown: Vec<bool>,
+    /// Shown cameras in camera id order.
+    pub tiles: Vec<Tile>,
+    pub timer_edit: Option<TimerEdit>,
+    /// Checkbox values of the open camera picker dialog.
+    pub picker: Option<Vec<bool>>,
+    pub scrub: Scrub,
+    opts: DecodeOptions,
+    waker: Waker,
+}
+
+impl Session {
+    /// All cameras shown, clock at the start of the range, paused, speed 1x.
+    pub fn new(library: Library, opts: DecodeOptions, waker: Waker, renderer: &VideoRenderer) -> Self {
+        let clock = Arc::new(Clock::new(library.start, library.end));
+        debug_assert_eq!(clock.snapshot().speed, DEFAULT_SPEED);
+        let mut session = Self {
+            shown: Vec::new(),
+            library,
+            clock,
+            tiles: Vec::new(),
+            timer_edit: None,
+            picker: None,
+            scrub: Scrub::default(),
+            opts,
+            waker,
+        };
+        session.set_shown(vec![true; session.library.cameras.len()], renderer);
+        session
+    }
+
+    /// Applies a camera choice. A hidden camera stops its decode and closes
+    /// its files. A camera that becomes shown joins at the current clock time.
+    pub fn set_shown(&mut self, shown: Vec<bool>, renderer: &VideoRenderer) {
+        let mut old: Vec<Option<Tile>> = std::mem::take(&mut self.tiles).into_iter().map(Some).collect();
+        for (camera, _) in shown.iter().enumerate().filter(|(_, on)| **on) {
+            let kept = old.iter_mut().find(|t| t.as_ref().is_some_and(|t| t.camera == camera));
+            let tile = match kept.and_then(Option::take) {
+                Some(tile) => tile,
+                None => Tile {
+                    camera,
+                    player: CameraPlayer::start(
+                        self.library.cameras[camera].clone(),
+                        self.clock.clone(),
+                        self.opts,
+                        self.waker.clone(),
+                    ),
+                    surface: renderer.new_tile(),
+                },
+            };
+            self.tiles.push(tile);
+        }
+        self.shown = shown;
+    }
+
+    pub fn shown_count(&self) -> usize {
+        self.shown.iter().filter(|on| **on).count()
+    }
+
+    /// Tells all decode threads that the clock changed.
+    fn wake_players(&self) {
+        for tile in &self.tiles {
+            tile.player.wake();
+        }
+    }
+
+    pub fn toggle_play(&self) {
+        self.clock.toggle();
+        self.wake_players();
+    }
+
+    pub fn jump(&self, time: Timestamp) {
+        self.clock.jump(time);
+        self.wake_players();
+    }
+
+    pub fn jump_by(&self, delta: i64) {
+        self.clock.jump_by(delta);
+        self.wake_players();
+    }
+
+    pub fn set_speed(&self, speed: f64) {
+        self.clock.set_speed(speed);
+        self.wake_players();
+    }
+
+    /// Pauses at the end of the range. Call on each screen refresh.
+    pub fn stop_at_end(&self) {
+        if self.clock.stop_at_end() {
+            self.wake_players();
+        }
+    }
+
+    /// The pointer is down on the progress bar at `target`. The clock
+    /// follows at a limited rate, so the decoders are not flooded.
+    /// Returns the delay until the next call is needed, when a jump is held back.
+    pub fn scrub_to(&mut self, target: Timestamp) -> Option<Duration> {
+        self.scrub.target = Some(target);
+        let now = Instant::now();
+        match self.scrub.sent {
+            Some((sent, _)) if sent == target => None,
+            Some((_, at)) if now.duration_since(at) < SCRUB_INTERVAL => Some(SCRUB_INTERVAL - now.duration_since(at)),
+            _ => {
+                self.scrub.sent = Some((target, now));
+                self.jump(target);
+                None
+            }
+        }
+    }
+
+    /// The pointer button was released. Makes sure the last position is used.
+    pub fn end_scrub(&mut self) {
+        if let Some(target) = self.scrub.target.take() {
+            if self.scrub.sent.is_none_or(|(sent, _)| sent != target) {
+                self.jump(target);
+            }
+        }
+        self.scrub.sent = None;
+    }
+}

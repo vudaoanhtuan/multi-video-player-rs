@@ -1,0 +1,36 @@
+use std::path::PathBuf;
+use std::sync::Arc;
+
+use egui_wgpu::{wgpu, WgpuSetup};
+
+fn main() -> eframe::Result {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
+
+    // The first argument can be the folder to open.
+    let folder = std::env::args_os().nth(1).map(PathBuf::from).filter(|p| p.is_dir());
+
+    let mut options = eframe::NativeOptions {
+        viewport: egui::ViewportBuilder::default()
+            .with_title("Video Player")
+            .with_inner_size([1280.0, 800.0])
+            .with_min_inner_size([640.0, 360.0]),
+        ..Default::default()
+    };
+    if let WgpuSetup::CreateNew(setup) = &mut options.wgpu_options.wgpu_setup {
+        // Video tiles are a light load. Prefer the low power GPU.
+        setup.power_preference = wgpu::PowerPreference::LowPower;
+        // 16 bit textures let the GPU read 10 bit hardware frames with no copy.
+        let base = setup.device_descriptor.clone();
+        setup.device_descriptor = Arc::new(move |adapter| {
+            let mut descriptor = base(adapter);
+            descriptor.required_features |= adapter.features() & wgpu::Features::TEXTURE_FORMAT_16BIT_NORM;
+            descriptor
+        });
+    }
+
+    eframe::run_native(
+        "Video Player",
+        options,
+        Box::new(move |cc| Ok(Box::new(video_player::ui::App::new(cc, folder)?))),
+    )
+}
