@@ -11,6 +11,7 @@
 //! | `text` | text | Typed text |
 //! | `paste` | text | A paste of this text (Cmd+V) |
 //! | `clipboard` | text | Replaces the system clipboard with a test clipboard that holds this text |
+//! | `clipshot` | file path | Writes the picture in the test clipboard as a PPM file |
 //! | `click` | `x,y` in window points | Pointer click |
 //! | `down`, `move`, `up` | `x,y` | Parts of a drag |
 //! | `shot` | file path | Writes the window picture as a PPM file |
@@ -29,6 +30,7 @@ pub enum Action {
     Text(String),
     Paste(String),
     Clipboard(String),
+    ClipShot(PathBuf),
     Down(Pos2),
     Move(Pos2),
     Up(Pos2),
@@ -39,7 +41,7 @@ pub enum Action {
 
 impl Action {
     fn is_input(&self) -> bool {
-        !matches!(self, Action::Shot(_) | Action::Stats | Action::Quit | Action::Clipboard(_))
+        !matches!(self, Action::Shot(_) | Action::Stats | Action::Quit | Action::Clipboard(_) | Action::ClipShot(_))
     }
 }
 
@@ -72,6 +74,7 @@ impl Script {
                 "text" => steps.push((at, Action::Text(argument.to_owned()))),
                 "paste" => steps.push((at, Action::Paste(argument.to_owned()))),
                 "clipboard" => steps.push((at, Action::Clipboard(argument.to_owned()))),
+                "clipshot" => steps.push((at, Action::ClipShot(PathBuf::from(argument)))),
                 "click" => {
                     steps.push((at, Action::Down(point())));
                     steps.push((at + 0.05, Action::Up(point())));

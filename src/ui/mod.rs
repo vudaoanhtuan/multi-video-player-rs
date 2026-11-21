@@ -1,6 +1,7 @@
 //! The app window: camera grid and control bar. The UI is egui, which is the
 //! same on all platforms.
 
+mod bbox;
 mod clipboard;
 mod controls;
 mod goto;
@@ -36,6 +37,8 @@ const MIN_REFRESH_INTERVAL: Duration = Duration::from_millis(14);
 const NOTICE_TIME: Duration = Duration::from_secs(8);
 /// How long the "copied" message stays on screen.
 const COPIED_NOTICE_TIME: Duration = Duration::from_secs(2);
+/// How long other short messages stay on screen.
+const MESSAGE_NOTICE_TIME: Duration = Duration::from_secs(4);
 
 enum State {
     NoFolder,
@@ -192,7 +195,7 @@ impl App {
             }
         }
 
-        if session.goto.is_some() || session.picker.is_some() || ctx.text_edit_focused() {
+        if session.goto.is_some() || session.picker.is_some() || session.bbox.is_dialog() || ctx.text_edit_focused() {
             return;
         }
         let pressed = |modifiers, key| ctx.input_mut(|i| i.consume_key(modifiers, key));
@@ -211,6 +214,12 @@ impl App {
         if pressed(Modifiers::NONE, Key::T) {
             session.copy_time_and_pause();
         }
+        if pressed(Modifiers::NONE, Key::F) {
+            session.toggle_bbox();
+        }
+        if session.bbox.is_picking() && pressed(Modifiers::NONE, Key::Escape) {
+            session.toggle_bbox();
+        }
         // Shift+G first: a check for G with no modifier also accepts Shift+G.
         if pressed(Modifiers::SHIFT, Key::G) {
             self.clipboard.request(ctx);
@@ -222,12 +231,19 @@ impl App {
         }
     }
 
-    /// Moves the time from a click on the timer, or from the T key, to the clipboard.
+    /// Moves copy requests of the session to the clipboard, and messages of
+    /// the session to the screen.
     fn handle_copy_request(&mut self, ctx: &egui::Context) {
         let State::Ready(session) = &mut self.state else { return };
         if let Some(text) = session.copy_request.take() {
             self.clipboard.copy(ctx, &text);
             self.notice = Some(Notice { text: format!("Copied {text}"), until: Instant::now() + COPIED_NOTICE_TIME });
+        }
+        if let Some(picture) = session.copy_picture_request.take() {
+            self.clipboard.copy_image(ctx, picture);
+        }
+        if let Some(text) = session.message.take() {
+            self.notice = Some(Notice { text, until: Instant::now() + MESSAGE_NOTICE_TIME });
         }
     }
 
@@ -301,6 +317,18 @@ impl App {
                             }
                         }
                         line += &format!(" | goto={}", if session.goto.is_some() { "open" } else { "closed" });
+                        line += &match &session.bbox {
+                            bbox::BboxMode::Off => " | bbox=off".to_owned(),
+                            bbox::BboxMode::PickCamera => " | bbox=pick".to_owned(),
+                            bbox::BboxMode::Dialog(d) => format!(
+                                " | bbox=dialog:{}:{}x{}:selection={:?}:copied={:?}",
+                                d.camera_id, d.picture.size[0], d.picture.size[1], d.selection, d.copied
+                            )
+                            .replace(' ', ""),
+                        };
+                        if let Some(notice) = &self.notice {
+                            line += &format!(" | notice={}", notice.text.replace(' ', "_"));
+                        }
                         if let Some(fake) = &self.clipboard.fake {
                             line += &format!(" | clipboard={fake}");
                         }
@@ -308,6 +336,10 @@ impl App {
                     }
                 }
                 selftest::Action::Clipboard(text) => self.clipboard.fake = Some(text),
+                selftest::Action::ClipShot(path) => match &self.clipboard.fake_image {
+                    Some(image) => selftest::save_ppm(&path, image),
+                    None => eprintln!("script: the test clipboard holds no picture"),
+                },
                 selftest::Action::Quit => ctx.send_viewport_cmd(egui::ViewportCommand::Close),
                 _ => {}
             }
@@ -416,7 +448,10 @@ impl eframe::App for App {
         if let State::Ready(session) = &mut self.state {
             picker::show(&ctx, session, &self.renderer);
             goto::show(&ctx, session);
+            bbox::show_dialog(&ctx, session);
         }
+        // Requests from the dialogs and from a click on a tile.
+        self.handle_copy_request(&ctx);
 
         // Ask for the next refresh. While paused, nothing is drawn until an
         // input event or a new frame arrives.

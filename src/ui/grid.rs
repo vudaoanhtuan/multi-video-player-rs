@@ -9,6 +9,8 @@ use crate::time::Timestamp;
 
 /// Color of the thin lines between tiles.
 const GRID_LINE: Color32 = Color32::from_gray(38);
+/// Border of the camera under the pointer during the camera choice of the bbox capture.
+const PICK_HIGHLIGHT: Color32 = Color32::from_rgb(76, 148, 255);
 
 /// Columns and rows of a grid that is close to square.
 pub fn grid_shape(count: usize) -> (usize, usize) {
@@ -51,6 +53,9 @@ pub fn show(ui: &mut Ui, session: &mut Session, clock: &Snapshot, renderer: &Vid
 
     let cell = egui::vec2(area.width() / columns as f32, area.height() / rows as f32);
     let mut next_due: Option<Timestamp> = None;
+    // Bbox capture: the user must click one camera.
+    let picking = session.bbox.is_picking();
+    let mut picked = None;
 
     for (i, tile) in session.tiles.iter_mut().enumerate() {
         let (column, row) = (i % columns, i / columns);
@@ -70,6 +75,18 @@ pub fn show(ui: &mut Ui, session: &mut Session, clock: &Snapshot, renderer: &Vid
         let label = Align2::LEFT_TOP.anchor_size(rect.min + egui::vec2(6.0, 6.0), galley.size() + egui::vec2(10.0, 4.0));
         painter.rect_filled(label, 3.0, Color32::from_black_alpha(160));
         painter.galley(label.min + egui::vec2(5.0, 2.0), galley, Color32::WHITE);
+
+        if picking {
+            let response = ui.interact(rect, egui::Id::unique(("pick-camera", tile.camera)), egui::Sense::click());
+            if response.hovered() {
+                // Highlight the camera under the pointer.
+                painter.rect_stroke(rect, 0.0, egui::Stroke::new(3.0, PICK_HIGHLIGHT), egui::StrokeKind::Inside);
+                ui.ctx().set_cursor_icon(egui::CursorIcon::PointingHand);
+            }
+            if response.clicked() {
+                picked = Some(i);
+            }
+        }
     }
 
     // Thin lines between the tiles.
@@ -79,6 +96,19 @@ pub fn show(ui: &mut Ui, session: &mut Session, clock: &Snapshot, renderer: &Vid
     }
     for row in 1..rows {
         painter.hline(area.x_range(), area.top() + row as f32 * cell.y, line);
+    }
+
+    if picking {
+        let text = "Click a camera to capture its frame. Esc cancels.";
+        let galley = painter.layout_no_wrap(text.to_owned(), FontId::proportional(13.0), Color32::WHITE);
+        let size = galley.size() + egui::vec2(20.0, 10.0);
+        let pill = Rect::from_center_size(egui::pos2(area.center().x, area.top() + 12.0 + size.y / 2.0), size);
+        painter.rect_filled(pill, size.y / 2.0, Color32::from_black_alpha(210));
+        painter.rect_stroke(pill, size.y / 2.0, egui::Stroke::new(1.0, PICK_HIGHLIGHT), egui::StrokeKind::Inside);
+        painter.galley(pill.min + egui::vec2(10.0, 5.0), galley, Color32::WHITE);
+    }
+    if let Some(tile) = picked {
+        session.open_bbox_dialog(ui.ctx(), renderer, tile);
     }
     next_due
 }

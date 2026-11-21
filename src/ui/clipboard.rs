@@ -17,6 +17,9 @@ pub struct Clipboard {
     /// The answer of the test clipboard to a read request.
     #[cfg(feature = "selftest")]
     fake_answer: Option<String>,
+    /// The last picture that was copied to the test clipboard.
+    #[cfg(feature = "selftest")]
+    pub fake_image: Option<egui::ColorImage>,
 }
 
 impl Clipboard {
@@ -27,6 +30,17 @@ impl Clipboard {
             return;
         }
         ctx.copy_text(text.to_owned());
+    }
+
+    /// Puts a picture in the clipboard.
+    pub fn copy_image(&mut self, ctx: &Context, image: egui::ColorImage) {
+        #[cfg(feature = "selftest")]
+        if let Some(fake) = self.fake.as_mut() {
+            *fake = format!("picture-{}x{}", image.size[0], image.size[1]);
+            self.fake_image = Some(image);
+            return;
+        }
+        ctx.copy_image(image);
     }
 
     /// Asks for the clipboard text. egui has no direct read: the system

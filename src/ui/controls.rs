@@ -49,6 +49,14 @@ pub fn show(ui: &mut Ui, mut session: Option<&mut Session>, clock: Option<&Snaps
                         session.picker = Some(session.shown.clone());
                     }
                 }
+                // Bbox capture. The button looks pressed during the camera choice.
+                let picking = session.as_deref().is_some_and(|s| s.bbox.is_picking());
+                let bbox = ui.add_sized([0.0, BUTTON_HEIGHT], egui::Button::new("BB").selected(picking));
+                if bbox.on_hover_text("Bbox capture: copy an area of a camera frame (F)").clicked() {
+                    if let Some(session) = session.as_deref_mut() {
+                        session.toggle_bbox();
+                    }
+                }
                 speed_menu(ui, session.as_deref(), clock);
 
                 let range = session.as_deref().map(|s| (s.library.start, s.library.end));

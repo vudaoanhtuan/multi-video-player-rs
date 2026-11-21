@@ -10,6 +10,7 @@ Build in this order.
 1. [folder-scan-and-timeline.md](folder-scan-and-timeline.md): read the folder, group files by camera, build the timeline.
 2. [synced-playback.md](synced-playback.md): one shared clock, black screen in gaps, smooth change between files.
 3. [controls-and-layout.md](controls-and-layout.md): camera grid, control bar (timer, progress bar, speed), camera picker dialog.
+4. [bbox-capture.md](bbox-capture.md): copy a rectangle area of one camera frame to the clipboard.
 
 ## Words used in all specs
 

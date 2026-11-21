@@ -19,7 +19,7 @@ The window shows only two parts: the camera grid and the control bar. There is n
 |                   camera grid (tiles)                    |
 |                                                          |
 +----------------------------------------------------------+
-| play/pause | 21:30:05 | progress bar | speed | cameras   |
+| play/pause | 21:30:05 | progress bar | speed | BB | cameras |
 +----------------------------------------------------------+
 ```
 
@@ -41,6 +41,7 @@ The control bar is one row at the bottom of the window. From left to right:
 | Timer | Shows the clock time. A click on it copies the time and pauses playback. |
 | Progress bar | Shows the clock position in the total time range. Takes all spare width. |
 | Speed menu | Sets the playback speed. |
+| BB button | Starts the bbox capture. See [bbox-capture.md](bbox-capture.md). |
 | Cameras button | Opens the camera picker dialog. |
 
 ## Play and pause
@@ -117,7 +118,7 @@ The control bar is one row at the bottom of the window. From left to right:
 - One camera only: the tile fills the grid.
 - Many cameras (for example 16): tiles get small but stay readable. Do not add scroll bars to the grid.
 - No folder open: show an "open a folder" message with an open button in the grid area, and disable the control bar.
-- While a text box or a dialog has the keyboard focus, the space, C, G, T, and arrow keys do not control playback.
+- While a text box or a dialog has the keyboard focus, the space, C, G, T, F, and arrow keys do not control playback.
 
 ## Done when
 

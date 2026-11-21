@@ -3,6 +3,7 @@
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 
+use super::bbox::{BboxDialog, BboxMode};
 use crate::clock::{Clock, DEFAULT_SPEED};
 use crate::library::Library;
 use crate::media::DecodeOptions;
@@ -52,6 +53,12 @@ pub struct Session {
     pub goto: Option<GotoDialog>,
     /// Text that the user asked to copy. The app moves it to the clipboard.
     pub copy_request: Option<String>,
+    /// A picture that the user asked to copy. The app moves it to the clipboard.
+    pub copy_picture_request: Option<egui::ColorImage>,
+    /// A short message for the user. The app shows it for some seconds.
+    pub message: Option<String>,
+    /// State of the bbox capture.
+    pub bbox: BboxMode,
     /// Checkbox values of the open camera picker dialog.
     pub picker: Option<Vec<bool>>,
     pub scrub: Scrub,
@@ -71,6 +78,9 @@ impl Session {
             tiles: Vec::new(),
             goto: None,
             copy_request: None,
+            copy_picture_request: None,
+            message: None,
+            bbox: BboxMode::Off,
             picker: None,
             scrub: Scrub::default(),
             opts,
@@ -115,6 +125,47 @@ impl Session {
         }
     }
 
+    /// Pauses the clock if it is playing.
+    pub fn pause(&self) {
+        if self.clock.snapshot().playing {
+            self.clock.pause();
+            self.wake_players();
+        }
+    }
+
+    /// The BB button or the F key: pauses playback and starts the camera
+    /// choice of the bbox capture. A second call stops the camera choice.
+    pub fn toggle_bbox(&mut self) {
+        match self.bbox {
+            BboxMode::Off => {
+                self.pause();
+                self.bbox = BboxMode::PickCamera;
+            }
+            BboxMode::PickCamera => self.bbox = BboxMode::Off,
+            BboxMode::Dialog(_) => {}
+        }
+    }
+
+    /// The user clicked a tile during the camera choice. Opens the dialog
+    /// with the frame that this tile shows.
+    pub fn open_bbox_dialog(&mut self, ctx: &egui::Context, renderer: &VideoRenderer, tile: usize) {
+        self.pause();
+        let Some(tile) = self.tiles.get(tile) else { return };
+        let camera_id = self.library.cameras[tile.camera].camera_id.clone();
+        let Some(frame) = tile.player.frame() else {
+            // Stay in the camera choice, so the user can click a different camera.
+            self.message = Some(format!("{camera_id} has no video at this time"));
+            return;
+        };
+        match renderer.read_picture(frame) {
+            Some(picture) => {
+                let time = self.clock.snapshot().time;
+                self.bbox = BboxMode::Dialog(Box::new(BboxDialog::new(ctx, camera_id, time, picture)));
+            }
+            None => self.message = Some(format!("Cannot read the frame of {camera_id}")),
+        }
+    }
+
     pub fn toggle_play(&self) {
         self.clock.toggle();
         self.wake_players();
@@ -134,10 +185,7 @@ impl Session {
     /// Pauses playback and asks for a copy of the clock time. The copied
     /// time is the time at which the clock stopped, so it is the time on screen.
     pub fn copy_time_and_pause(&mut self) {
-        if self.clock.snapshot().playing {
-            self.clock.pause();
-            self.wake_players();
-        }
+        self.pause();
         self.copy_request = Some(self.clock.snapshot().time.format_hms());
     }
 

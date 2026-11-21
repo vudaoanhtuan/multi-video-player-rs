@@ -97,6 +97,7 @@ pub struct VideoRenderer {
     layout: wgpu::BindGroupLayout,
     sampler: wgpu::Sampler,
     importer: Option<Box<dyn HwFrameImporter>>,
+    target_format: wgpu::TextureFormat,
     srgb_target: bool,
     import_failed: std::cell::Cell<bool>,
 }
@@ -187,6 +188,7 @@ impl VideoRenderer {
             layout,
             sampler,
             importer,
+            target_format: state.target_format,
             srgb_target: state.target_format.is_srgb(),
             import_failed: std::cell::Cell::new(false),
         }
@@ -302,6 +304,102 @@ impl VideoRenderer {
                 wgpu::BindGroupEntry { binding: 3, resource: wgpu::BindingResource::Sampler(&self.sampler) },
             ],
         })
+    }
+
+    /// Converts a frame to an RGB picture in normal memory, at the full size
+    /// of the video. The GPU does the conversion with the same shader that
+    /// draws the tiles, so the picture has the colors that are on screen.
+    ///
+    /// This waits for the GPU. Use it for a single frame, not during playback.
+    pub fn read_picture(&self, frame: &Arc<VideoFrame>) -> Option<egui::ColorImage> {
+        let mut tile = self.new_tile();
+        let draw = self.prepare(&mut tile, Some(frame))?;
+
+        // Square pixels: a video with pixels that are not square is made wider or narrower.
+        let height = frame.format.height;
+        let width = (height as f32 * draw.display_aspect).round() as u32;
+        let limit = self.device.limits().max_texture_dimension_2d;
+        if width == 0 || height == 0 || width > limit || height > limit {
+            return None;
+        }
+        let size = wgpu::Extent3d { width, height, depth_or_array_layers: 1 };
+        let target = self.device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("frame picture"),
+            size,
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            // The pipeline is made for the format of the window.
+            format: self.target_format,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::COPY_SRC,
+            view_formats: &[],
+        });
+        let view = target.create_view(&wgpu::TextureViewDescriptor::default());
+        // Rows in a GPU buffer must have a length that is a multiple of 256 bytes.
+        let row_bytes = width * 4;
+        let padded_row_bytes = row_bytes.next_multiple_of(wgpu::COPY_BYTES_PER_ROW_ALIGNMENT);
+        let buffer = self.device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("frame picture"),
+            size: padded_row_bytes as u64 * height as u64,
+            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+            mapped_at_creation: false,
+        });
+
+        let mut encoder = self.device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("frame picture"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: &view,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations { load: wgpu::LoadOp::Clear(wgpu::Color::BLACK), store: wgpu::StoreOp::Store },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(0, &*draw.bind_group, &[]);
+            pass.draw(0..4, 0..1);
+        }
+        encoder.copy_texture_to_buffer(
+            wgpu::TexelCopyTextureInfo {
+                texture: &target,
+                mip_level: 0,
+                origin: wgpu::Origin3d::ZERO,
+                aspect: wgpu::TextureAspect::All,
+            },
+            wgpu::TexelCopyBufferInfo {
+                buffer: &buffer,
+                layout: wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(padded_row_bytes),
+                    rows_per_image: Some(height),
+                },
+            },
+            size,
+        );
+        self.queue.submit([encoder.finish()]);
+
+        let (sender, mapped) = std::sync::mpsc::channel();
+        buffer.map_async(wgpu::MapMode::Read, .., move |result| {
+            let _ = sender.send(result);
+        });
+        self.device.poll(wgpu::PollType::wait_indefinitely()).ok()?;
+        mapped.recv().ok()?.ok()?;
+        let data = buffer.get_mapped_range(..).ok()?;
+
+        let bgra = matches!(self.target_format, wgpu::TextureFormat::Bgra8Unorm | wgpu::TextureFormat::Bgra8UnormSrgb);
+        let mut pixels = Vec::with_capacity(width as usize * height as usize);
+        for row in data.chunks_exact(padded_row_bytes as usize) {
+            for px in row[..row_bytes as usize].chunks_exact(4) {
+                let (r, b) = if bgra { (px[2], px[0]) } else { (px[0], px[2]) };
+                pixels.push(egui::Color32::from_rgb(r, px[1], b));
+            }
+        }
+        Some(egui::ColorImage::new([width as usize, height as usize], pixels))
     }
 
     /// An egui shape that draws the frame over `rect`.

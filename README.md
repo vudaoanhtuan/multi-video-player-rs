@@ -45,6 +45,7 @@ The script makes `dist/Video Player.app`. The app is one executable of about 16 
 | G | Open the "go to time" dialog. Type or paste `HH:mm:ss` or `HHmmss` |
 | Shift+G | Jump to the time in the clipboard, if the clipboard text is `HH:mm:ss` or `HHmmss` |
 | T, or a click on the timer | Pause and copy the clock time |
+| F, or the BB button | Bbox capture: pause, click a camera, then draw a rectangle on its frame. The area is copied as a picture |
 | Click or drag on the progress bar | Jump |
 
 ## Design
@@ -55,7 +56,7 @@ The script makes `dist/Video Player.app`. The app is one executable of about 16 
 | `media` | Frame types and the FFmpeg decode backend | No (FFmpeg is portable) |
 | `playback` | One decode thread for each shown camera | No |
 | `render` | wgpu pipeline that draws NV12 and P010 frames | No (wgpu is portable) |
-| `ui` | egui window: grid, control bar, camera picker | No (egui is portable) |
+| `ui` | egui window: grid, control bar, dialogs (camera picker, go to time, bbox capture) | No (egui is portable) |
 | `platform` | Hardware decoder choice, zero-copy frame import, app menu, folder dialog | Yes |
 
 ### Playback model
