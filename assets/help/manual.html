@@ -7,6 +7,7 @@
   The "Help" entry of the app menu opens this file in the web browser.
   The file is part of the executable. Change this file to change the manual.
   A unit test in src/ui/help.rs checks that each hotkey is in the hotkey table.
+  The app replaces the text {{version}} with its version number when it writes the file.
 -->
 <style>
   body { font-family: -apple-system, "Segoe UI", sans-serif; max-width: 760px; margin: 32px auto; padding: 0 16px; line-height: 1.5; background: #1b1b1b; color: #dcdcdc; }
@@ -15,11 +16,13 @@
   th, td { text-align: left; padding: 4px 14px 4px 0; vertical-align: top; }
   kbd { font-family: ui-monospace, Menlo, monospace; background: #3c3c3c; border-radius: 4px; padding: 1px 6px; }
   code { font-family: ui-monospace, Menlo, monospace; }
+  .version { color: #9a9a9a; margin-top: -12px; }
 </style>
 </head>
 <body>
 
 <h1>Video Player user manual</h1>
+<p class="version">Version {{version}}</p>
 <p>Video Player opens a folder of camera recordings and plays all cameras at the same time of day.</p>
 
 <h2>Hotkeys</h2>

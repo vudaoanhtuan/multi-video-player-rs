@@ -109,6 +109,7 @@ Without these steps, Windows uses the fallback file. The fallback file was not b
 
 The "Help" entry of the menu button opens `assets/help/manual.html` in the web browser of the system.
 The file is part of the executable. At each use, the app writes a copy to the temporary folder of the system and opens that copy.
+The copy shows the app version below the title. The version comes from `version` in `Cargo.toml`: the app replaces the text `{{version}}` in the manual.
 A unit test checks that the manual lists each hotkey. When you add a hotkey, add it to the manual and to that test.
 
 ## Icons

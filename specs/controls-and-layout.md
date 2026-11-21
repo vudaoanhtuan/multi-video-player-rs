@@ -138,6 +138,7 @@ The control bar is one row at the bottom of the window. From left to right:
 
 - The menu of the menu button has a "Help" entry. It opens the user manual in the web browser that the user set as the default.
 - The manual explains each function of the app and has a table of all hotkeys.
+- The manual shows the version of the app below its title, for example "Version 0.1.0". The version comes from the package version of the app. The manual file has the text `{{version}}` at that place, and the app replaces it when it writes the copy.
 - The manual is one HTML file: `assets/help/manual.html`. It is part of the executable. To change the manual, change this file only.
 - The app does not show HTML itself. It writes a copy of the manual to the temporary folder of the system and asks the system to open that file.
 - Help is available in each state, also with no folder open.
