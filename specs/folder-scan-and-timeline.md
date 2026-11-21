@@ -6,7 +6,7 @@ Read a folder of video files and turn it into one camera timeline per camera, pl
 
 ## In scope
 
-- Open a folder from a menu item in the app menu, the open button on the empty window, or a command line argument.
+- Open a folder from a menu item in the app menu, the "Open Folder…" entry of the control bar menu, the open button on the empty window, or a command line argument.
 - Read file names and video lengths.
 - Build the camera timelines and the total time range.
 
@@ -62,6 +62,7 @@ find(camera, time) ->
 - A chunk passes midnight: this works because the app keeps the full date and time.
 - No matching files in the folder: show a "no videos found" message. The app has no library and the controls stay disabled.
 - The user opens a second folder: stop playback, drop the old library, and scan the new folder.
+- The user closes the folder ("Close Folder" in the control bar menu): stop playback, close all files, and drop the library. The app has no library, as at the start with no folder.
 
 ## Done when
 

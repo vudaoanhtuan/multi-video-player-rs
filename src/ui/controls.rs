@@ -42,6 +42,7 @@ impl Icon {
 
 static PLAY_ICON: Icon = Icon::new("bytes://icons/play_arrow.svg", include_str!("../../assets/icons/play_arrow.svg"));
 static PAUSE_ICON: Icon = Icon::new("bytes://icons/pause.svg", include_str!("../../assets/icons/pause.svg"));
+static MORE_ICON: Icon = Icon::new("bytes://icons/more_vert.svg", include_str!("../../assets/icons/more_vert.svg"));
 static SCISSORS_ICON: Icon = Icon::new("bytes://icons/content_cut.svg", include_str!("../../assets/icons/content_cut.svg"));
 static CAMERA_ICON: Icon = Icon::new("bytes://icons/photo_camera.svg", include_str!("../../assets/icons/photo_camera.svg"));
 
@@ -49,13 +50,29 @@ pub fn speed_label(speed: f64) -> String {
     format!("{speed}x")
 }
 
-/// Shows the control bar. With no session, all items are shown disabled.
-pub fn show(ui: &mut Ui, mut session: Option<&mut Session>, clock: Option<&Snapshot>) {
-    ui.set_height(BAR_HEIGHT);
-    ui.add_enabled_ui(session.is_some(), |ui| {
-        ui.horizontal_centered(|ui| {
-            ui.spacing_mut().item_spacing.x = 10.0;
+/// A command from the menu of the control bar.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum BarAction {
+    OpenFolder,
+    CloseFolder,
+}
 
+/// Shows the control bar. With no session, all items are shown disabled,
+/// except the menu button: the user needs it to open a folder.
+/// `can_close` is true when there is something to close.
+pub fn show(
+    ui: &mut Ui,
+    mut session: Option<&mut Session>,
+    clock: Option<&Snapshot>,
+    can_close: bool,
+) -> Option<BarAction> {
+    ui.set_height(BAR_HEIGHT);
+    let enabled = session.is_some();
+    let mut action = None;
+    ui.horizontal_centered(|ui| {
+        ui.spacing_mut().item_spacing.x = 10.0;
+
+        ui.add_enabled_ui(enabled, |ui| {
             if play_button(ui, clock.is_some_and(|c| c.playing)).clicked() {
                 if let Some(session) = session.as_deref_mut() {
                     session.toggle_play();
@@ -67,10 +84,14 @@ pub fn show(ui: &mut Ui, mut session: Option<&mut Session>, clock: Option<&Snaps
                     ui.add_sized([TIMER_WIDTH, BUTTON_HEIGHT], egui::Button::new(RichText::new(NO_TIME).monospace()));
                 }
             }
+        });
 
-            // The items on the right are laid out first. The progress bar
-            // then takes all the width that is left.
-            ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+        // The items on the right are laid out first, from the right end. The
+        // progress bar then takes all the width that is left.
+        ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
+            action = more_menu(ui, can_close);
+
+            ui.add_enabled_ui(enabled, |ui| {
                 // Cameras: a camera icon and the count of shown cameras.
                 let count = session.as_deref().map(|s| format!("{}/{}", s.shown_count(), s.library.cameras.len()));
                 let cameras = icon_button(ui, &CAMERA_ICON, count.as_deref(), false);
@@ -100,6 +121,25 @@ pub fn show(ui: &mut Ui, mut session: Option<&mut Session>, clock: Option<&Snaps
             });
         });
     });
+    action
+}
+
+/// The menu button at the right end of the control bar: three vertical dots.
+fn more_menu(ui: &mut Ui, can_close: bool) -> Option<BarAction> {
+    let button = icon_button(ui, &MORE_ICON, None, false);
+    let mut action = None;
+    egui::Popup::menu(&button).show(|ui| {
+        ui.set_min_width(150.0);
+        if ui.button("Open Folder…").clicked() {
+            action = Some(BarAction::OpenFolder);
+            ui.close();
+        }
+        if ui.add_enabled(can_close, egui::Button::new("Close Folder")).clicked() {
+            action = Some(BarAction::CloseFolder);
+            ui.close();
+        }
+    });
+    action
 }
 
 fn text_width(ui: &Ui, text: &str) -> f32 {

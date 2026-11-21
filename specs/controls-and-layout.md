@@ -19,7 +19,7 @@ The window shows only two parts: the camera grid and the control bar. There is n
 |                   camera grid (tiles)                    |
 |                                                          |
 +----------------------------------------------------------+
-| play/pause | 21:30:05 | progress bar | speed | bbox | cameras |
+| play/pause | 21:30:05 | progress bar | speed | bbox | cameras | menu |
 +----------------------------------------------------------+
 ```
 
@@ -43,6 +43,7 @@ The control bar is one row at the bottom of the window. From left to right:
 | Speed menu | Sets the playback speed. |
 | Bbox button | A button with a scissors icon. Starts the bbox capture. See [bbox-capture.md](bbox-capture.md). |
 | Cameras button | A button with a camera icon and the count of shown cameras. Opens the camera picker dialog. |
+| Menu button | A button with three vertical dots, at the right end. Opens a menu with "Open Folder…" and "Close Folder". |
 
 ## Play and pause
 
@@ -109,9 +110,17 @@ The control bar is one row at the bottom of the window. From left to right:
 - If the list is longer than the dialog, the list scrolls.
 - The cameras button shows a camera icon and the count, for example "3/5". With no folder open, it shows the icon only.
 - The bbox button and the cameras button have no text label. Each button shows its name and its key when the pointer is over it.
-- The icons are SVG files from the Material Icons set: `play_arrow` and `pause` for the play/pause button, `content_cut` for the bbox button, and `photo_camera` for the cameras button. Keep the files in `assets/icons/`.
+- The icons are SVG files from the Material Icons set: `play_arrow` and `pause` for the play/pause button, `content_cut` for the bbox button, `photo_camera` for the cameras button, and `more_vert` for the menu button. Keep the files in `assets/icons/`.
 - An icon has the color of the button text in each button state (normal, pointer over, pressed, disabled).
 - If no camera is selected, the grid is empty and the clock still works.
+
+## Menu button
+
+- A click on the menu button opens a small menu next to the button. A click outside the menu closes it.
+- "Open Folder…" shows the folder dialog. It does the same as the other ways to open a folder. See [folder-scan-and-timeline.md](folder-scan-and-timeline.md).
+- "Close Folder" stops playback, closes all video files, and drops the library. The window then shows the "open a folder" message, and the control bar is disabled.
+- "Close Folder" is disabled when no folder is open.
+- The menu button is always enabled, also when the control bar is disabled. The user needs it to open a folder.
 
 ## Audio
 
@@ -121,7 +130,7 @@ The control bar is one row at the bottom of the window. From left to right:
 
 - One camera only: the tile fills the grid.
 - Many cameras (for example 16): tiles get small but stay readable. Do not add scroll bars to the grid.
-- No folder open: show an "open a folder" message with an open button in the grid area, and disable the control bar.
+- No folder open: show an "open a folder" message with an open button in the grid area, and disable the control bar. The menu button stays enabled.
 - While a text box or a dialog has the keyboard focus, the space, C, G, T, F, and arrow keys do not control playback.
 
 ## Done when
@@ -139,5 +148,7 @@ The control bar is one row at the bottom of the window. From left to right:
 - A paste of `21:45` in the "go to time" dialog does nothing. The typed text `21:45` and Enter sets the clock to 21:45:00.
 - A click on the timer while playing pauses playback and puts the clock time in the clipboard. The T key does the same.
 - The speed menu shows 1x, 2x, 4x, 8x, 16x.
+- "Close Folder" in the menu while playing shows the "open a folder" message and disables the control bar. The menu button still works.
+- "Open Folder…" in the menu, with no folder open, opens a folder. All cameras are shown and the state is paused.
 - A speed of 4x moves the shown time 4 seconds for each real second.
 - The time labels at the two ends of the bar equal the earliest start and the latest end in the folder.

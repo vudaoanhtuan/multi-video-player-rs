@@ -142,7 +142,21 @@ impl App {
         });
     }
 
+    /// Stops playback, closes all files, and shows the "open a folder" message.
+    fn close_folder(&mut self) {
+        // Replacing the state drops the session. That stops its decode threads.
+        self.state = State::NoFolder;
+        self.notice = None;
+        self.clipboard_jump = false;
+    }
+
     fn choose_folder(&mut self, ctx: &egui::Context) {
+        // Scripted tests cannot use the native dialog. They give the folder here.
+        #[cfg(feature = "selftest")]
+        if let Some(folder) = std::env::var_os("VIDEO_PLAYER_TEST_FOLDER") {
+            self.open_folder(PathBuf::from(folder), ctx);
+            return;
+        }
         if let Some(folder) = platform::pick_folder() {
             self.open_folder(folder, ctx);
         }
@@ -307,6 +321,13 @@ impl App {
                     ctx.request_screenshot(move |image| selftest::save_ppm(&path, &image));
                 }
                 selftest::Action::Stats => {
+                    match &self.state {
+                        State::Ready(_) => {}
+                        State::NoFolder => println!("stats state=no-folder"),
+                        State::Loading { .. } => println!("stats state=loading"),
+                        State::NoVideos => println!("stats state=no-videos"),
+                        State::Failed(_) => println!("stats state=failed"),
+                    }
                     if let State::Ready(session) = &self.state {
                         let clock = session.clock.snapshot();
                         let ms = |t: crate::time::Timestamp| format!("{}.{:03}", t.format_hms(), t.time_of_day() / 1000 % 1000);
@@ -407,14 +428,23 @@ impl eframe::App for App {
             _ => None,
         };
 
+        let can_close = !matches!(self.state, State::NoFolder);
+        let mut bar_action = None;
         egui::Panel::bottom("control-bar").resizable(false).show(ui, |ui| {
             let session = match &mut self.state {
                 State::Ready(session) => Some(&mut **session),
                 _ => None,
             };
-            controls::show(ui, session, clock.as_ref());
+            bar_action = controls::show(ui, session, clock.as_ref(), can_close);
         });
         self.handle_copy_request(&ctx);
+        match bar_action {
+            Some(controls::BarAction::OpenFolder) => want_open = true,
+            Some(controls::BarAction::CloseFolder) => self.close_folder(),
+            None => {}
+        }
+        // The session can be gone now. Do not use the clock of a closed session.
+        let clock = clock.filter(|_| matches!(self.state, State::Ready(_)));
 
         let mut next_due = None;
         let grid_area = egui::CentralPanel::no_frame()
