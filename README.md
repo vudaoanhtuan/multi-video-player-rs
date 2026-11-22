@@ -101,7 +101,7 @@ The script makes `dist\Multi Video Player.exe`. The app is one executable of abo
 | `[` / `]` | Jump 30 seconds back / forward. With Shift: 10 minutes |
 | C, or the cameras button (video camera icon) | Open the camera picker |
 | Cmd+O (Ctrl+O on Windows) | Open a folder |
-| Menu button (three dots) | "Open Folder…", "Close Folder", "Settings…" (opens the settings dialog. Video ratio: "16:9" stretches each video to 16:9, "None" keeps the shape of the video. Camera name: "Show" puts the camera id in the top left corner of each tile, default "Hide". Decoder: "Hardware" or "Software". Key frames only from: the lowest speed that shows key frames only, default 4x), and "Help" (opens the user manual with all hotkeys in the web browser) |
+| Menu button (three dots) | "Open Folder…", "Close Folder", "Settings…" (opens the settings dialog. Video ratio: "16:9" stretches each video to 16:9, "None" keeps the shape of the video. Camera name: "Show" puts the camera id in the top left corner of each tile, default "Hide". Decoder: "Hardware" or "Software". Key frames only from: the lowest speed that shows key frames only, default 4x. Apply saves the settings, and the app starts with the saved settings), and "Help" (opens the user manual with all hotkeys in the web browser) |
 | G | Open the "go to time" dialog. Type or paste `HH:mm:ss` or `HHmmss` |
 | Shift+G | Jump to the time in the clipboard, if the clipboard text is `HH:mm:ss` or `HHmmss` |
 | T, or a click on the timer | Pause and copy the clock time |
@@ -177,6 +177,29 @@ Notes for Windows:
 
 To add Linux: add the `x11` and `wayland` features of `eframe`, and a platform file if hardware decode is necessary. The fallback file was not built or tested.
 
+## Settings file
+
+"Apply" in the settings dialog saves the settings as JSON text. The app reads the file at each start.
+
+| System | File |
+|---|---|
+| macOS | `~/Library/Application Support/Multi Video Player/settings.json` |
+| Windows | `%APPDATA%\Multi Video Player\settings.json` |
+
+```json
+{
+  "video_ratio": "Wide16x9",
+  "show_camera_name": false,
+  "decoder": "Hardware",
+  "key_only_min_speed": 4
+}
+```
+
+- A field has the name of its field in `Settings` (`src/ui/settings.rs`).
+- A setting that is an enum is saved as the name of the enum value in the code: `"None"` or `"Wide16x9"` for `video_ratio`, `"Hardware"` or `"Software"` for `decoder`.
+- A setting that is not in the file, or that has a value that is not valid, gets its default. To get all defaults again, delete the file.
+- A new name for a field or for an enum value in the code changes the file format: the saved value of that setting is then not valid.
+
 ## User manual
 
 The "Help" entry of the menu button opens `assets/help/manual.html` in the web browser of the system.
@@ -196,8 +219,9 @@ The app icon is one SVG file: `assets/app-icon/app-icon.svg`. To change the icon
 ## Development tools
 
 - `MULTI_VIDEO_PLAYER_DECODE=software` starts the app with the "Decoder" setting at "Software". `MULTI_VIDEO_PLAYER_DECODE=copy` turns off zero copy. Use them to compare the decode paths.
+- `MULTI_VIDEO_PLAYER_SETTINGS=<file>` makes the app read and save the settings in this file, and not in the settings file of the user.
 - `RUST_LOG=info` prints the decode setup. `RUST_LOG=debug` also shows FFmpeg warnings.
-- `cargo build --release --features selftest` adds a script tool that sends keys and clicks to the real window, saves window pictures, and prints the frame time of each tile. See `src/ui/selftest.rs`.
+- `cargo build --release --features selftest` adds a script tool that sends keys and clicks to the real window, saves window pictures, and prints the frame time of each tile. See `src/ui/selftest.rs`. With a script, the app does not read or save the settings file of the user: it uses a settings file only if `MULTI_VIDEO_PLAYER_SETTINGS` is set.
 
 ## Limits
 

@@ -11,6 +11,7 @@
 //! | App menu | Native menu bar | None (the UI has an open button and Ctrl+O) | None |
 //! | Folder dialog | Native dialog | Native dialog | Native dialog (`rfd`) |
 //! | Open a file in the web browser | `open` command | Windows shell | `xdg-open` command |
+//! | Folder for the settings of apps | `~/Library/Application Support` | `%APPDATA%` | `$XDG_CONFIG_HOME` or `~/.config` |
 //!
 //! To add a system: add a file next to `macos.rs` with the same functions and
 //! select it in the `cfg` block below. No other module needs a change.
@@ -98,6 +99,12 @@ pub fn install_app_menu(on_command: impl Fn(MenuCommand) + Send + Sync + 'static
 /// Opens an HTML file in the web browser that the user set as the default.
 pub fn open_in_browser(file: &Path) -> std::io::Result<()> {
     imp::open_in_browser(file)
+}
+
+/// The folder in which the apps of the user keep their settings. The app
+/// makes its own folder in it. `None`: the system does not give the folder.
+pub fn config_dir() -> Option<PathBuf> {
+    imp::config_dir()
 }
 
 /// Runs a system command that opens a file with its default app.

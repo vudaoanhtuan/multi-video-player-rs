@@ -20,6 +20,9 @@ libc = "0.2"
 log = "0.4"
 env_logger = "0.11"
 bytemuck = { version = "1", features = ["derive"] }
+# The settings file is JSON. See src/ui/settings.rs.
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 
 [features]
 # Development tool: scripted input and window pictures. See src/ui/selftest.rs.

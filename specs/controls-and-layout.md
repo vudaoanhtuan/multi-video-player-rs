@@ -173,8 +173,45 @@ The control bar is one row at the bottom of the window. From left to right:
   - Apply puts all values of the dialog in use and closes the dialog. The Enter key does the same.
   - Cancel closes the dialog with no change. The Escape key and a click outside the dialog do the same.
 - Playback continues while the dialog is open. The hotkeys do nothing while the dialog is open.
-- Each setting has its default at each start of the app.
+- The app saves the settings, and starts with the saved settings. See "Saved settings".
 - The settings stay when the user closes a folder or opens a different folder.
+
+### Saved settings
+
+- Apply saves all settings in the settings file, if a value changed. Cancel does not change the file.
+- At each start, the app reads the settings file and uses the saved settings.
+- If there is no settings file, each setting has its default. This is the condition at the first start of the app.
+- The settings file is `settings.json` in the folder `Multi Video Player`, in the folder that the system gives for the settings of apps:
+  - macOS: `~/Library/Application Support/Multi Video Player/settings.json`
+  - Windows: `%APPDATA%\Multi Video Player\settings.json`
+- The app makes the folder and the file at the first save.
+- The file is JSON text: one object with one field for each setting.
+
+| Field | Setting | Value |
+|---|---|---|
+| `video_ratio` | Video ratio | `"None"` or `"Wide16x9"` |
+| `show_camera_name` | Camera name | `false` for "Hide", `true` for "Show" |
+| `decoder` | Decoder | `"Hardware"` or `"Software"` |
+| `key_only_min_speed` | Key frames only from | A whole number, 1 or more |
+
+- A setting that is an enum in the code is saved as the name of the enum value in the code, not as the label that the dialog shows. For example, the option "16:9" is saved as `"Wide16x9"`.
+- Example of a file with the defaults:
+
+```json
+{
+  "video_ratio": "Wide16x9",
+  "show_camera_name": false,
+  "decoder": "Hardware",
+  "key_only_min_speed": 4
+}
+```
+
+- A setting that the file does not have gets its default. A setting with a value that is not valid gets its default, and the other settings keep their saved values. A `key_only_min_speed` of 0 becomes 1.
+- If the file is not a JSON object, or the app cannot read it, each setting has its default. The app does not show a message, and it does not change the file until the next Apply.
+- The app ignores fields that it does not know.
+- If the app cannot write the file, it shows a short message. The new settings are in use until the app closes.
+- If the saved decoder is "Hardware" and the computer has no hardware decoder that the app can use, the app starts with "Software".
+- The `MULTI_VIDEO_PLAYER_SETTINGS` environment variable replaces the path of the settings file. It is for tests.
 
 ### Video ratio
 
@@ -263,12 +300,16 @@ The control bar is one row at the bottom of the window. From left to right:
 - The 0 key sets 10x. Shift + 3 sets 13x. Shift + 0 sets 20x.
 - A digit key typed in the "go to time" dialog does not change the speed.
 - With the default setting, a 4:3 video fills a 16:9 area in its tile. With "None", the same video is shown as 4:3.
-- "Settings…" in the menu opens the settings dialog, with and without an open folder. "16:9" and "Hardware" are selected after the app starts.
+- "Settings…" in the menu opens the settings dialog, with and without an open folder. "16:9" and "Hardware" are selected after the first start of the app, when there is no settings file.
 - A click on "Software" in the settings dialog while playing does not change the decode. A click on Apply then closes the dialog. The clock continues, and all tiles show frames again after a moment.
-- After the app starts, the tiles show no camera id label. A click on "Show" for "Camera name" and then on Apply shows the camera id in the top left corner of each tile.
+- With no settings file, the tiles show no camera id label after the app starts. A click on "Show" for "Camera name" and then on Apply shows the camera id in the top left corner of each tile.
 - A click on "None" and then on Cancel leaves the video ratio at "16:9". The dialog shows "16:9" when it opens again.
 - A click on the "Key frames only from" box, the text `6`, and Enter closes the dialog and sets the value to 6. The text `40` and Apply sets the value to 40. The text `0` and Apply sets the value to 1.
 - With the default of 4 and a speed of 4x, a video with one key frame each second changes its picture 4 times each real second. With "Key frames only from" at 8, the same video at 4x shows the frames between the key frames.
+- A click on "None", on "Show", and on Apply writes the settings file with `"video_ratio": "None"` and `"show_camera_name": true`. After the app closes and starts again, the tiles show the camera id, the videos keep their shape, and the dialog shows "None" and "Show".
+- With `"decoder": "Software"` in the settings file, the dialog shows "Software" after the app starts.
+- With `"video_ratio": "16:9"` and `"key_only_min_speed": 8` in the settings file, the app starts with the video ratio "16:9" (the default, because the value is not an enum name) and with "Key frames only from" at 8.
+- A click on "None" and then on Cancel does not make or change the settings file.
 - The Escape key closes the settings dialog with no change. The space key does not change the play state while the dialog is open.
 - "Help" in the menu opens the manual in the web browser, with and without an open folder. The manual lists each hotkey of the app.
 - The window title shows the app name, the version, and the path of the open folder. After "Close Folder", it shows the name and the version only.

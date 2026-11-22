@@ -185,6 +185,8 @@ pub struct App {
     /// user applies them. The dialog does not belong to a session: it also
     /// works with no folder open.
     settings_draft: Option<settings::Settings>,
+    /// The file in which the app saves the settings. `None`: the app does not save them.
+    settings_file: Option<PathBuf>,
     clipboard: clipboard::Clipboard,
     /// Shift+G asked for the clipboard text. A valid time in it starts a jump.
     clipboard_jump: bool,
@@ -207,10 +209,14 @@ impl App {
         let support = platform::video_support(&render_state.device);
         let mut hw_decode = support.hw_decode;
         let mut importer = support.importer;
-        let mut settings = settings::Settings::default();
+        // The app starts with the settings that the user applied last.
+        let scripted = cfg!(feature = "selftest") && std::env::var_os("MULTI_VIDEO_PLAYER_SCRIPT").is_some();
+        let settings_file = settings::file_path(scripted);
+        let mut settings = settings_file.as_deref().map(settings::Settings::load).unwrap_or_default();
         // For tests and problem reports: MULTI_VIDEO_PLAYER_DECODE=software | copy
         match std::env::var("MULTI_VIDEO_PLAYER_DECODE").as_deref() {
-            // The start value of the "Decoder" setting. The user can change it in the settings dialog.
+            // The start value of the "Decoder" setting, also with a saved setting.
+            // The user can change it in the settings dialog.
             Ok("software") => settings.decoder = settings::Decoder::Software,
             Ok("copy") => {
                 importer = None;
@@ -250,6 +256,7 @@ impl App {
             notice: None,
             settings,
             settings_draft: None,
+            settings_file,
             clipboard: clipboard::Clipboard::default(),
             clipboard_jump: false,
             last_refresh: Instant::now(),
@@ -280,11 +287,18 @@ impl App {
         }
     }
 
-    /// Puts new settings in use.
+    /// Puts new settings in use and saves them.
     fn apply_settings(&mut self, new: settings::Settings, ctx: &egui::Context) {
         let before = std::mem::replace(&mut self.settings, new);
         if self.settings == before {
             return;
+        }
+        if let Some(file) = &self.settings_file {
+            if let Err(error) = self.settings.save(file) {
+                log::warn!("cannot save the settings file {}: {error}", file.display());
+                let text = format!("Could not save the settings: {error}");
+                self.notice = Some(Notice { text, until: Instant::now() + MESSAGE_NOTICE_TIME });
+            }
         }
         if self.settings.decoder != before.decoder {
             log::info!("decoder: {}", self.settings.decoder.label());
@@ -295,7 +309,7 @@ impl App {
         }
         if self.settings.key_only_min_speed != before.key_only_min_speed {
             if let State::Ready(session) = &mut self.state {
-                session.set_key_only_min_speed(self.settings.key_only_min_speed);
+                session.set_key_only_min_speed(f64::from(self.settings.key_only_min_speed));
             }
         }
         // The grid of this refresh was drawn with the old settings.
@@ -389,7 +403,7 @@ impl App {
                     Some(library) => State::Ready(Box::new(Session::new(
                         library,
                         opts,
-                        self.settings.key_only_min_speed,
+                        f64::from(self.settings.key_only_min_speed),
                         self.waker.clone(),
                         &self.renderer,
                     ))),
@@ -696,7 +710,8 @@ impl eframe::App for App {
             })
             .inner;
 
-        if matches!(self.state, State::Ready(_)) {
+        // The "No videos found" message shows the notice text itself.
+        if !matches!(self.state, State::NoVideos) {
             self.show_notice(ui, grid_area);
         }
         if let State::Ready(session) = &mut self.state {

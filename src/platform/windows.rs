@@ -17,7 +17,7 @@
 
 use std::ffi::{c_void, CString};
 use std::os::windows::ffi::OsStrExt;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::ptr::{self, NonNull};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::collections::VecDeque;
@@ -412,6 +412,11 @@ pub fn open_in_browser(file: &Path) -> std::io::Result<()> {
     } else {
         Err(std::io::Error::other(format!("Windows cannot open the file (code {code})")))
     }
+}
+
+/// The folder in which the apps of the user keep their settings.
+pub fn config_dir() -> Option<PathBuf> {
+    std::env::var_os("APPDATA").map(PathBuf::from).filter(|path| path.is_absolute())
 }
 
 /// A release build is a window program, which has no console. When a terminal

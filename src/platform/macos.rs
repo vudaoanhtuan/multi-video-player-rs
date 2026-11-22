@@ -130,6 +130,11 @@ pub fn open_in_browser(file: &std::path::Path) -> std::io::Result<()> {
     super::run_open_command(command)
 }
 
+/// The folder in which the apps of the user keep their settings.
+pub fn config_dir() -> Option<std::path::PathBuf> {
+    Some(std::env::home_dir()?.join("Library").join("Application Support"))
+}
+
 pub struct NativeMenu {
     _menu: Menu,
 }

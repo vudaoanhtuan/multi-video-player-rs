@@ -20,6 +20,13 @@ pub fn open_in_browser(file: &std::path::Path) -> std::io::Result<()> {
     super::run_open_command(command)
 }
 
+/// The folder in which the apps of the user keep their settings.
+pub fn config_dir() -> Option<std::path::PathBuf> {
+    // An XDG path that is not absolute is not valid.
+    let xdg = std::env::var_os("XDG_CONFIG_HOME").map(std::path::PathBuf::from).filter(|path| path.is_absolute());
+    xdg.or_else(|| Some(std::env::home_dir()?.join(".config")))
+}
+
 pub fn install_app_menu(_on_command: Box<dyn Fn(MenuCommand) + Send + Sync>) -> Option<NativeMenu> {
     None
 }
