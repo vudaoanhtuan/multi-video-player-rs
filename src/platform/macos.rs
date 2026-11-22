@@ -38,6 +38,7 @@ pub fn video_support(device: &wgpu::Device) -> VideoSupport {
             device_type: ffmpeg_sys_next::AVHWDeviceType::AV_HWDEVICE_TYPE_VIDEOTOOLBOX,
             zero_copy_nv12: on_metal,
             zero_copy_p010: on_metal && has_16_bit,
+            export: None,
         }),
         importer: on_metal.then(|| Box::new(IoSurfaceImporter) as Box<dyn HwFrameImporter>),
     }
@@ -117,16 +118,16 @@ impl HwFrameImporter for IoSurfaceImporter {
             }
             let uv = planes.pop()?;
             let y = planes.pop()?;
-            Some(ImportedSurface { y, uv, full_range })
+            Some(ImportedSurface { y, uv, full_range, visible: [1.0, 1.0] })
         }
     }
 }
 
-/// The system command that opens a file with its default app.
-pub fn browser_command(file: &std::path::Path) -> std::process::Command {
+/// Opens a file with its default app.
+pub fn open_in_browser(file: &std::path::Path) -> std::io::Result<()> {
     let mut command = std::process::Command::new("open");
     command.arg(file);
-    command
+    super::run_open_command(command)
 }
 
 pub struct NativeMenu {

@@ -30,6 +30,27 @@ muda = "0.21"
 objc2-metal = { version = "0.3", features = ["objc2-io-surface"] }
 objc2-io-surface = "0.3"
 
+[target.'cfg(target_os = "windows")'.dependencies]
+# Direct3D types for the zero-copy frame import. The version must be the
+# version that wgpu-hal uses, because the two crates exchange these types.
+windows = { version = "0.62", features = [
+    "Win32_Foundation",
+    "Win32_Graphics_Direct3D11",
+    "Win32_Graphics_Direct3D12",
+    "Win32_Graphics_Dxgi",
+    "Win32_Graphics_Dxgi_Common",
+    "Win32_Security",
+    "Win32_System_Console",
+    "Win32_System_LibraryLoader",
+    "Win32_UI_Shell",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+[target.'cfg(target_os = "windows")'.build-dependencies]
+# build.rs draws the app icon and puts it in the executable.
+resvg = { version = "0.45", default-features = false }
+winresource = "0.1"
+
 [profile.release]
 opt-level = 3
 lto = "thin"

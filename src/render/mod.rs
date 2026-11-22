@@ -16,6 +16,24 @@ use crate::platform::HwFrameImporter;
 struct Params {
     yuv_to_rgb: [[f32; 4]; 4],
     options: [f32; 4],
+    crop: [f32; 4],
+}
+
+/// The `crop` value of the shader for textures of `size` pixels, of which the
+/// fraction `visible` (width, height) holds the picture.
+fn crop_params(size: (u32, u32), visible: [f32; 2]) -> [f32; 4] {
+    // The chroma plane has half the size, and a sample mixes the pixels
+    // around its position. Stop one luma pixel (half a chroma pixel) before
+    // the end of the picture. A texture with no unused part needs no limit:
+    // the sampler stops at the texture edge.
+    let limit = |visible: f32, pixels: u32| {
+        if visible < 1.0 {
+            visible - 1.0 / pixels.max(1) as f32
+        } else {
+            1.0
+        }
+    };
+    [visible[0], visible[1], limit(visible[0], size.0), limit(visible[1], size.1)]
 }
 
 /// Builds the matrix that maps normalized (Y, Cb, Cr, 1) plane values to RGB.
@@ -122,7 +140,8 @@ impl VideoRenderer {
             entries: &[
                 wgpu::BindGroupLayoutEntry {
                     binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    // The vertex shader reads the crop values.
+                    visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
                         has_dynamic_offset: false,
@@ -222,6 +241,7 @@ impl VideoRenderer {
 
     fn build(&self, tile: &mut TileSurface, frame: &Arc<VideoFrame>) -> Option<Shown> {
         let mut format = frame.format;
+        let mut crop = [1.0; 4];
         let bind_group = match &frame.data {
             FrameData::Hw(surface) => {
                 let imported = self.importer.as_ref().and_then(|i| i.import(&self.device, surface));
@@ -234,6 +254,7 @@ impl VideoRenderer {
                 if let Some(full_range) = imported.full_range {
                     format.full_range = full_range;
                 }
+                crop = crop_params((imported.y.width(), imported.y.height()), imported.visible);
                 Arc::new(self.bind_group(&tile.uniform, &imported.y, &imported.uv))
             }
             FrameData::Cpu(image) => self.upload(tile, &format, image),
@@ -242,6 +263,7 @@ impl VideoRenderer {
         let params = Params {
             yuv_to_rgb: yuv_to_rgb(format.matrix, format.full_range, format.bit_depth),
             options: [self.srgb_target as u8 as f32, 0.0, 0.0, 0.0],
+            crop,
         };
         if tile.params != Some(params) {
             self.queue.write_buffer(&tile.uniform, 0, bytemuck::bytes_of(&params));
@@ -466,6 +488,16 @@ mod tests {
         assert_rgb(convert(m, [1.0, 128.0 / 255.0, 128.0 / 255.0]), [1.0, 1.0, 1.0]);
         // BT.601 full range blue is (29, 255, 107).
         assert_rgb(convert(m, [29.0 / 255.0, 1.0, 107.0 / 255.0]), [0.0, 0.0, 1.0]);
+    }
+
+    #[test]
+    fn crop_keeps_samples_inside_the_picture() {
+        // The texture holds only the picture: no limit.
+        assert_eq!(crop_params((1920, 1080), [1.0, 1.0]), [1.0; 4]);
+        // A picture of 1920 x 1080 in a texture of 1920 x 1088.
+        let crop = crop_params((1920, 1088), [1.0, 1080.0 / 1088.0]);
+        assert_eq!(crop[..3], [1.0, 1080.0 / 1088.0, 1.0]);
+        assert!((crop[3] - 1079.0 / 1088.0).abs() < 1e-6);
     }
 
     #[test]

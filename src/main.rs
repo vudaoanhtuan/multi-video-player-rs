@@ -1,9 +1,17 @@
+// A release build for Windows is a window program: no console window opens
+// with it. The test build keeps the console, because its scripts print results.
+#![cfg_attr(
+    all(target_os = "windows", not(debug_assertions), not(feature = "selftest")),
+    windows_subsystem = "windows"
+)]
+
 use std::path::PathBuf;
 use std::sync::Arc;
 
 use egui_wgpu::{wgpu, WgpuSetup};
 
 fn main() -> eframe::Result {
+    multi_video_player::platform::init_process();
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("warn")).init();
 
     // The first argument can be the folder to open.
@@ -19,6 +27,10 @@ fn main() -> eframe::Result {
     }
     let mut options = eframe::NativeOptions { viewport, ..Default::default() };
     if let WgpuSetup::CreateNew(setup) = &mut options.wgpu_options.wgpu_setup {
+        // The `WGPU_BACKEND` environment variable replaces the choice of the platform.
+        if let (Some(backends), None) = (multi_video_player::platform::gpu_backends(), wgpu::Backends::from_env()) {
+            setup.instance_descriptor.backends = backends;
+        }
         // Video tiles are a light load. Prefer the low power GPU.
         setup.power_preference = wgpu::PowerPreference::LowPower;
         // 16 bit textures let the GPU read 10 bit hardware frames with no copy.

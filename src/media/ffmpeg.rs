@@ -1,7 +1,8 @@
 //! FFmpeg backend: reads the stored length of a file and decodes video.
 //!
 //! FFmpeg reads the MKV container and drives the hardware decoder of the
-//! platform (VideoToolbox on macOS). Audio streams are never read.
+//! platform (VideoToolbox on macOS, Direct3D on Windows). Audio streams are
+//! never read.
 
 use std::ffi::CString;
 use std::path::Path;
@@ -24,7 +25,9 @@ const SOFTWARE_THREADS: i32 = 4;
 /// Stop after this number of packets in a row that the decoder refuses.
 const MAX_PACKET_ERRORS: u32 = 50;
 
-fn init() {
+/// Sets the log level of FFmpeg. Each entry point of this module calls it.
+/// The platform layer calls it before it uses FFmpeg directly.
+pub(crate) fn init() {
     static INIT: Once = Once::new();
     // FFmpeg prints to stderr. Problems are reported through `log` by this
     // app, so FFmpeg stays silent unless debug logging is on.
@@ -101,9 +104,26 @@ struct DevicePtr(*mut ff::AVBufferRef);
 // decoder takes its own reference with `av_buffer_ref`.
 unsafe impl Send for DevicePtr {}
 
+/// The hardware device of the app, with its type. The pointer is null after a
+/// failed creation.
+static DEVICE: Mutex<Option<(ff::AVHWDeviceType, DevicePtr)>> = Mutex::new(None);
+
+/// Makes `device` the hardware device of the app for `device_type`. The
+/// platform layer uses this when the decoder must work on the GPU device of
+/// the renderer. Without it, FFmpeg makes its own device at the first use.
+///
+/// # Safety
+/// `device` must be an initialized hardware device context of this type. The
+/// function takes the ownership of the reference.
+pub unsafe fn install_hw_device(device_type: ff::AVHWDeviceType, device: NonNull<ff::AVBufferRef>) {
+    let old = DEVICE.lock().unwrap().replace((device_type, DevicePtr(device.as_ptr())));
+    if let Some((_, mut old)) = old {
+        ff::av_buffer_unref(&mut old.0);
+    }
+}
+
 /// One hardware device for the whole app. `None` after a failed creation.
 fn hw_device(device_type: ff::AVHWDeviceType) -> Option<*mut ff::AVBufferRef> {
-    static DEVICE: Mutex<Option<(ff::AVHWDeviceType, DevicePtr)>> = Mutex::new(None);
     let mut guard = DEVICE.lock().unwrap();
     if let Some((existing, device)) = guard.as_ref() {
         if *existing == device_type {
@@ -469,20 +489,23 @@ impl Decoder {
                 _ => false,
             };
             if let (true, Some(surface_format)) = (zero_copy, surface_format) {
-                // Move the frame out. The GPU reads the decoder memory directly.
+                // Move the frame out. The picture stays in hardware memory,
+                // and the renderer reads it there.
                 let owned = NonNull::new(ff::av_frame_alloc()).ok_or("out of memory")?;
                 ff::av_frame_move_ref(owned.as_ptr(), self.frame);
-                format.bit_depth = if surface_format == SurfaceFormat::P010 { 10 } else { 8 };
-                FrameData::Hw(HwSurface::from_raw(owned, surface_format))
+                let mut surface = HwSurface::from_raw(owned, surface_format);
+                let export = self.opts.hw.and_then(|hw| hw.export);
+                if export.is_none_or(|export| export(&mut surface)) {
+                    format.bit_depth = if surface_format == SurfaceFormat::P010 { 10 } else { 8 };
+                    FrameData::Hw(surface)
+                } else {
+                    // The platform layer cannot give this frame to the renderer.
+                    FrameData::Cpu(self.copy_hw_frame(owned.as_ptr(), format.full_range)?)
+                }
             } else {
                 // Copy the picture to normal memory. Slower, but works with all renderers.
-                let ret = ff::av_hwframe_transfer_data(self.sw_frame, self.frame, 0);
+                let image = self.copy_hw_frame(self.frame, format.full_range);
                 ff::av_frame_unref(self.frame);
-                if ret < 0 {
-                    return Err(format!("cannot read hardware frame: {}", error_text(ret)));
-                }
-                let image = self.convert_to_nv12(self.sw_frame, format.full_range);
-                ff::av_frame_unref(self.sw_frame);
                 FrameData::Cpu(image?)
             }
         } else {
@@ -491,6 +514,17 @@ impl Decoder {
             FrameData::Cpu(image?)
         };
         Ok(DecodedFrame { pos, frame: VideoFrame { format, data } })
+    }
+
+    /// Copies a frame from hardware memory to normal memory as 8 bit NV12.
+    unsafe fn copy_hw_frame(&mut self, frame: *const ff::AVFrame, full_range: bool) -> Result<CpuImage, String> {
+        let ret = ff::av_hwframe_transfer_data(self.sw_frame, frame, 0);
+        if ret < 0 {
+            return Err(format!("cannot read hardware frame: {}", error_text(ret)));
+        }
+        let image = self.convert_to_nv12(self.sw_frame, full_range);
+        ff::av_frame_unref(self.sw_frame);
+        image
     }
 
     /// Copies or converts a software frame to 8 bit NV12.

@@ -4,13 +4,13 @@
 //! (Metal on macOS, Direct3D 12 on Windows), winit owns the window, and
 //! FFmpeg decodes. This module holds the parts that have no portable form:
 //!
-//! | Part | macOS | Other systems (fallback) |
-//! |---|---|---|
-//! | Hardware decoder | VideoToolbox | D3D11VA on Windows, else software |
-//! | Decoder frame to GPU texture | Zero copy through IOSurface | Copy through normal memory |
-//! | App menu | Native menu bar | None (the UI has an open button and Ctrl+O) |
-//! | Folder dialog | Native dialog | Native dialog (`rfd`) |
-//! | Open a file in the web browser | `open` command | `start` on Windows, `xdg-open` on other systems |
+//! | Part | macOS | Windows | Other systems (fallback) |
+//! |---|---|---|---|
+//! | Hardware decoder | VideoToolbox | Direct3D 11 | Software |
+//! | Decoder frame to GPU texture | Zero copy through IOSurface | Copy on the GPU to a texture that the renderer shares | Copy through normal memory |
+//! | App menu | Native menu bar | None (the UI has an open button and Ctrl+O) | None |
+//! | Folder dialog | Native dialog | Native dialog | Native dialog (`rfd`) |
+//! | Open a file in the web browser | `open` command | Windows shell | `xdg-open` command |
 //!
 //! To add a system: add a file next to `macos.rs` with the same functions and
 //! select it in the `cfg` block below. No other module needs a change.
@@ -26,9 +26,14 @@ mod macos;
 #[cfg(target_os = "macos")]
 use macos as imp;
 
-#[cfg(not(target_os = "macos"))]
+#[cfg(target_os = "windows")]
+mod windows;
+#[cfg(target_os = "windows")]
+use windows as imp;
+
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 mod fallback;
-#[cfg(not(target_os = "macos"))]
+#[cfg(not(any(target_os = "macos", target_os = "windows")))]
 use fallback as imp;
 
 /// GPU textures that show the planes of one hardware frame.
@@ -39,6 +44,10 @@ pub struct ImportedSurface {
     pub uv: wgpu::Texture,
     /// The value range stored in the surface, when the surface knows it.
     pub full_range: Option<bool>,
+    /// The part of the textures that holds the picture, as a fraction of the
+    /// width and of the height. The picture starts at the top left corner.
+    /// A decoder can use textures that are larger than the picture.
+    pub visible: [f32; 2],
 }
 
 /// Turns a hardware decoder frame into GPU textures with no pixel copy.
@@ -58,6 +67,19 @@ pub fn video_support(device: &wgpu::Device) -> VideoSupport {
     imp::video_support(device)
 }
 
+/// The GPU interfaces that the app can use on this system. `None` lets wgpu
+/// choose.
+pub fn gpu_backends() -> Option<wgpu::Backends> {
+    // Zero copy on Windows needs Direct3D 12.
+    cfg!(target_os = "windows").then_some(wgpu::Backends::DX12)
+}
+
+/// Prepares the process. Call it first in `main`.
+pub fn init_process() {
+    #[cfg(target_os = "windows")]
+    imp::attach_parent_console();
+}
+
 /// A command from the native app menu.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum MenuCommand {
@@ -75,7 +97,13 @@ pub fn install_app_menu(on_command: impl Fn(MenuCommand) + Send + Sync + 'static
 
 /// Opens an HTML file in the web browser that the user set as the default.
 pub fn open_in_browser(file: &Path) -> std::io::Result<()> {
-    let status = imp::browser_command(file).status()?;
+    imp::open_in_browser(file)
+}
+
+/// Runs a system command that opens a file with its default app.
+#[cfg(not(target_os = "windows"))]
+fn run_open_command(mut command: std::process::Command) -> std::io::Result<()> {
+    let status = command.status()?;
     if status.success() {
         Ok(())
     } else {

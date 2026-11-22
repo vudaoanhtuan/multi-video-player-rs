@@ -7,3 +7,9 @@
 FFMPEG_DIR = { value = "ffmpeg-build/prefix", relative = true }
 # The oldest macOS that can run the app. scripts/build-ffmpeg.sh uses the same value.
 MACOSX_DEPLOYMENT_TARGET = "12.0"
+
+# Windows: link the C runtime library statically. The executable then needs no
+# Visual C++ runtime on the computer of the user. scripts/build-ffmpeg.ps1
+# builds FFmpeg in the same way (-MT).
+[target.'cfg(all(target_os = "windows", target_env = "msvc"))']
+rustflags = ["-C", "target-feature=+crt-static"]

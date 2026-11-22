@@ -25,7 +25,7 @@ Build in this order.
 ## Rules for all specs
 
 - The project folder is empty. Build a desktop app in Rust (assumed from the project name `video-player-rust`).
-- The builder chooses the window and video decode libraries. The app must run on macOS.
+- The builder chooses the window and video decode libraries. The app must run on macOS and on Windows.
 - The app never plays audio. Do not decode audio tracks.
 - The app only reads video files. It never changes, moves, or deletes them.
 - File name times are local times. Do not convert time zones.

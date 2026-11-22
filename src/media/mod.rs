@@ -3,6 +3,7 @@
 
 pub mod ffmpeg;
 
+use std::any::Any;
 use std::ffi::c_void;
 use std::ptr::NonNull;
 
@@ -57,10 +58,21 @@ pub struct CpuImage {
 
 /// A decoded picture that is still in the memory of the hardware decoder.
 ///
-/// The platform layer turns it into GPU textures with no copy. On macOS the
-/// native handle is a `CVPixelBufferRef`.
+/// The platform layer turns it into GPU textures with no copy.
+///
+/// - macOS: the surface holds the frame of the decoder. The native handle is
+///   a `CVPixelBufferRef`.
+/// - Windows: the frame of the decoder is a part of a texture that only the
+///   decoder can use, and the decoder has a small fixed number of them. The
+///   platform layer copies the picture on the GPU to a texture that the
+///   renderer can read ([`HwDecode::export`]). The surface then holds that
+///   texture, and the frame of the decoder is released.
 pub struct HwSurface {
-    frame: NonNull<ff::AVFrame>,
+    /// The frame of the decoder. `None` after an export.
+    frame: Option<NonNull<ff::AVFrame>>,
+    /// The picture that the platform layer made from the frame.
+    exported: Option<Box<dyn Any + Send + Sync>>,
+    picture_size: (u32, u32),
     pub format: SurfaceFormat,
 }
 
@@ -75,21 +87,55 @@ impl HwSurface {
     /// # Safety
     /// `frame` must be a valid hardware frame made by `av_frame_alloc`.
     pub(crate) unsafe fn from_raw(frame: NonNull<ff::AVFrame>, format: SurfaceFormat) -> Self {
-        Self { frame, format }
+        let (width, height) = (frame.as_ref().width, frame.as_ref().height);
+        Self { frame: Some(frame), exported: None, picture_size: (width.max(0) as u32, height.max(0) as u32), format }
     }
 
     /// The native surface handle. Its type depends on the hardware decoder:
-    /// `CVPixelBufferRef` for VideoToolbox.
+    /// `CVPixelBufferRef` for VideoToolbox. Null after an export.
     pub fn native_handle(&self) -> *mut c_void {
         // FFmpeg stores the surface in `data[3]` for VideoToolbox, DXVA2, and VAAPI.
-        unsafe { self.frame.as_ref().data[3].cast() }
+        self.data_pointer(3)
+    }
+
+    /// One of the data pointers of the FFmpeg frame. Its meaning depends on
+    /// the hardware decoder: Direct3D 11 stores the texture in `data[0]` and
+    /// the index of the picture in that texture in `data[1]`. Null after an export.
+    pub fn data_pointer(&self, index: usize) -> *mut c_void {
+        match self.frame {
+            Some(frame) => unsafe { frame.as_ref().data[index].cast() },
+            None => std::ptr::null_mut(),
+        }
+    }
+
+    /// Size of the picture in pixels. The texture of the decoder can be larger.
+    pub fn picture_size(&self) -> (u32, u32) {
+        self.picture_size
+    }
+
+    /// Gives the surface a picture that the platform layer made from the
+    /// frame of the decoder, and releases that frame.
+    pub fn set_exported(&mut self, picture: Box<dyn Any + Send + Sync>) {
+        self.exported = Some(picture);
+        self.release_frame();
+    }
+
+    /// The picture from [`HwSurface::set_exported`], if it has the type `T`.
+    pub fn exported<T: 'static>(&self) -> Option<&T> {
+        self.exported.as_ref()?.downcast_ref()
+    }
+
+    fn release_frame(&mut self) {
+        if let Some(frame) = self.frame.take() {
+            let mut ptr = frame.as_ptr();
+            unsafe { ff::av_frame_free(&mut ptr) };
+        }
     }
 }
 
 impl Drop for HwSurface {
     fn drop(&mut self) {
-        let mut ptr = self.frame.as_ptr();
-        unsafe { ff::av_frame_free(&mut ptr) };
+        self.release_frame();
     }
 }
 
@@ -119,6 +165,12 @@ pub struct HwDecode {
     pub zero_copy_nv12: bool,
     /// The renderer can use P010 hardware frames with no copy.
     pub zero_copy_p010: bool,
+    /// For a platform where the renderer cannot read the frames of the
+    /// decoder directly. The decode thread calls this for each frame that
+    /// stays in hardware memory. The function copies the picture on the GPU
+    /// to a texture for the renderer and calls [`HwSurface::set_exported`].
+    /// When it returns `false`, the decoder copies the frame to normal memory.
+    pub export: Option<fn(&mut HwSurface) -> bool>,
 }
 
 #[derive(Clone, Copy, Debug, Default)]

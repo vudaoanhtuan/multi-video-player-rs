@@ -22,8 +22,13 @@ const MS: i64 = 1_000;
 
 /// The `ffmpeg` command of this project. It is built with the libraries.
 fn ffmpeg_tool() -> PathBuf {
-    let tool = Path::new(env!("CARGO_MANIFEST_DIR")).join("ffmpeg-build/tools/bin/ffmpeg");
-    assert!(tool.exists(), "{} is not built. Run ./scripts/build-ffmpeg.sh", tool.display());
+    let name = format!("ffmpeg{}", std::env::consts::EXE_SUFFIX);
+    let tool = Path::new(env!("CARGO_MANIFEST_DIR")).join("ffmpeg-build/tools/bin").join(name);
+    assert!(
+        tool.exists(),
+        "{} is not built. Run scripts/build-ffmpeg.sh (macOS) or scripts/build-ffmpeg.ps1 (Windows)",
+        tool.display()
+    );
     tool
 }
 
@@ -41,11 +46,17 @@ fn fixtures() -> &'static Path {
             ("a_20261019T100012.mkv", 4),
             ("b_20261019T100000.mkv", 16),
         ] {
-            // H.264 from the encoder of macOS, which also works with no encoder hardware.
+            // H.264 from the encoder of the system, which also works with no encoder hardware.
+            let encoder: &[&str] = if cfg!(target_os = "windows") {
+                &["-pix_fmt", "nv12", "-c:v", "h264_mf", "-hw_encoding", "0"]
+            } else {
+                &["-pix_fmt", "yuv420p", "-c:v", "h264_videotoolbox", "-allow_sw", "1"]
+            };
             let status = Command::new(ffmpeg_tool())
                 .args(["-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi"])
                 .args(["-i", "testsrc2=size=320x240:rate=25", "-t", &seconds.to_string()])
-                .args(["-an", "-pix_fmt", "yuv420p", "-c:v", "h264_videotoolbox", "-allow_sw", "1"])
+                .arg("-an")
+                .args(encoder)
                 .args(["-b:v", "600k", "-g", "25", "-bf", "0"])
                 .arg(dir.join(name))
                 .status()
@@ -78,6 +89,22 @@ fn decode_modes() -> Vec<(&'static str, DecodeOptions)> {
                 device_type: ffmpeg_sys_next::AVHWDeviceType::AV_HWDEVICE_TYPE_VIDEOTOOLBOX,
                 zero_copy_nv12: true,
                 zero_copy_p010: true,
+                export: None,
+            }),
+        },
+    ));
+    // Direct3D 11 with a frame copy. Zero copy on Windows needs the GPU
+    // device of the renderer, which a test with no window does not have.
+    // On a computer with no GPU, this mode decodes in software.
+    #[cfg(target_os = "windows")]
+    modes.push((
+        "hardware",
+        DecodeOptions {
+            hw: Some(multi_video_player::media::HwDecode {
+                device_type: ffmpeg_sys_next::AVHWDeviceType::AV_HWDEVICE_TYPE_D3D11VA,
+                zero_copy_nv12: false,
+                zero_copy_p010: false,
+                export: None,
             }),
         },
     ));

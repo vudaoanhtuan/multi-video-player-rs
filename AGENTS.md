@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A native desktop app in Rust that opens a folder of camera recordings (`<camera-id>_<yyyyMMddTHHmmss>.mkv`) and plays all cameras at the same time of day. macOS is the supported platform. Windows is a later target, so OS-specific code stays in `src/platform/`.
+A native desktop app in Rust that opens a folder of camera recordings (`<camera-id>_<yyyyMMddTHHmmss>.mkv`) and plays all cameras at the same time of day. macOS and Windows are the supported platforms. OS-specific code stays in `src/platform/`.
 
 `specs/` is the source of truth for behavior. Read the related spec before you change behavior.
 
@@ -20,11 +20,22 @@ cargo clippy --all-targets --features selftest      # lint, must be clean
 ./scripts/bundle-macos.sh                     # builds dist/Multi Video Player.app (one executable)
 ```
 
+On Windows the cargo commands are the same. The scripts are PowerShell scripts:
+
+```powershell
+.\scripts\build-ffmpeg.ps1                    # one time: builds the FFmpeg of the project in ffmpeg-build\
+.\scripts\bundle-windows.ps1                  # builds dist\Multi Video Player.exe (one executable)
+```
+
 - The project never uses an FFmpeg of the system (Homebrew, `pkg-config`, or `ffmpeg` in `PATH`). `scripts/build-ffmpeg.sh` builds static libraries in `ffmpeg-build/prefix/` and a small `ffmpeg` command in `ffmpeg-build/tools/bin/`. `.cargo/config.toml` sets `FFMPEG_DIR` to the libraries, and all cargo commands link them statically.
-- If cargo fails in `ffmpeg-sys-next` with `'libavutil/avutil.h' file not found`, run `./scripts/build-ffmpeg.sh`.
+- Windows uses PowerShell scripts only. `scripts/build-ffmpeg.ps1` is the Windows form of `scripts/build-ffmpeg.sh`: it does not call the shell script, and a change for Windows must not change the shell scripts. It runs the configure script and `make` of FFmpeg in the shell of MSYS2 with the Microsoft compiler. Keep the FFmpeg version and the decoder list equal in the two scripts.
+- If cargo fails in `ffmpeg-sys-next` with `'libavutil/avutil.h' file not found`, run the FFmpeg build script.
+- Windows needs LLVM for `libclang` (the `ffmpeg-sys-next` build uses it). FFmpeg and the Rust program link the C runtime library statically (`-MT` in `scripts/build-ffmpeg.ps1`, `crt-static` in `.cargo/config.toml`). Keep the two equal.
 - `tests/playback.rs` makes small videos with `ffmpeg-build/tools/bin/ffmpeg`. Do not call a system `ffmpeg` or `ffprobe` in tests or scripts.
-- To add a decoder or another FFmpeg part, change the configure options in `scripts/build-ffmpeg.sh` and increase the number in its `WANT` line, so the script builds again.
-- `cargo build` does not update `dist/Multi Video Player.app`. Run `scripts/bundle-macos.sh` after a change if the app bundle must have it. The bundle script uses the normal release build in `target/release`.
+- To add a decoder or another FFmpeg part, change the configure options in `scripts/build-ffmpeg.sh` and increase the number in its `WANT` line, so the script builds again. Do the same in `scripts/build-ffmpeg.ps1` (`$want`).
+- cargo keeps a copy of the FFmpeg libraries in the build of `ffmpeg-sys-next` and does not see new libraries. The Windows script removes that copy after a build. In other cases, run `cargo clean -p ffmpeg-sys-next` (and with `--release`) after a new FFmpeg build.
+- `cargo build` does not update `dist/Multi Video Player.app` or `dist\Multi Video Player.exe`. Run the bundle script after a change if the app bundle must have it. The bundle script uses the normal release build in `target/release`.
+- A computer builds the code of its system only. After a change in `platform/mod.rs`, or in a type that the platform files use (for example `HwDecode`, `ImportedSurface`), update `macos.rs`, `windows.rs`, `fallback.rs`, and `tests/playback.rs` in the same change, and say which system was not built.
 
 ## Library versions
 
@@ -38,7 +49,7 @@ egui/eframe 0.37, wgpu 30, and ffmpeg-sys-next 9 are recent, and their APIs diff
 | `media` | Frame types, and the FFmpeg backend (`media/ffmpeg.rs`, raw FFI): length probe, decoder, hardware decode. |
 | `playback` | One decode thread for each shown camera. |
 | `render` | wgpu pipeline that draws NV12/P010 frames inside the egui render pass, and reads one frame back as a picture. |
-| `platform` | Hardware decoder choice, zero-copy frame import, native menu, folder dialog, open a file in the web browser. `macos.rs` and `fallback.rs` have the same functions. |
+| `platform` | Hardware decoder choice, zero-copy frame import, native menu, folder dialog, open a file in the web browser. `macos.rs`, `windows.rs`, and `fallback.rs` have the same functions. |
 | `ui` | egui app. |
 
 ### Playback model (read `playback/mod.rs` and `playback/worker.rs` together)
@@ -52,7 +63,11 @@ egui/eframe 0.37, wgpu 30, and ffmpeg-sys-next 9 are recent, and their APIs diff
 
 ### Frames and rendering
 
-- A decoded frame is `FrameData::Hw` (a `CVPixelBuffer` from VideoToolbox, imported as Metal textures with no copy through `platform::HwFrameImporter`) or `FrameData::Cpu` (NV12 in memory, uploaded).
+- A decoded frame is `FrameData::Hw` (a frame in the memory of the hardware decoder, imported as GPU textures with no copy through `platform::HwFrameImporter`) or `FrameData::Cpu` (NV12 in memory, uploaded).
+- macOS: the hardware frame is a `CVPixelBuffer` from VideoToolbox, imported as Metal textures.
+- Windows: FFmpeg decodes with Direct3D 11 on its own device, which `platform/windows.rs` makes on the GPU of the renderer (`media::ffmpeg::install_hw_device`). The renderer uses Direct3D 12 and cannot read the frames of the decoder. The decode thread calls `HwDecode::export`, which copies the picture on the GPU to a shared texture and waits for the copy. The `HwSurface` then holds that texture (`HwSurface::exported`) and not the frame of the decoder. If the two devices cannot share textures, the app uses a frame copy through memory.
+- Do not move the Windows decode to the Direct3D 12 device of the renderer (`AV_HWDEVICE_TYPE_D3D12VA`). It was tested: a stream that the decoder cannot decode makes the device fail, and the renderer stops with it.
+- `ImportedSurface::visible` gives the part of the textures that holds the picture. The shader does not read outside it.
 - `VideoRenderer::prepare` + `paint_callback` draw a tile. The tile rectangle is the only place where the video shape is applied, so the "video ratio" setting costs nothing.
 - `VideoRenderer::read_picture` renders one frame with the same shader and reads it back. Bbox capture uses it.
 
@@ -62,7 +77,7 @@ egui/eframe 0.37, wgpu 30, and ffmpeg-sys-next 9 are recent, and their APIs diff
 - `ui/session.rs` holds one open folder: library, clock, tiles, and dialog state. Widgets do not act on the app directly. They set request fields on the session (`copy_request`, `copy_picture_request`, `message`) or return a `BarAction`, and `App` handles them.
 - The window is drawn only when necessary. While playing, `App` asks for the next refresh at the due time of the next queued frame. Do not add a continuous repaint.
 - eframe does not call `ui()` for a covered or minimized window. `App::logic` keeps a slow heartbeat for that case.
-- Icons are Material SVG files in `assets/icons/` (see its README). The app icon is `assets/app-icon/app-icon.svg`: `ui/app_icon.rs` draws it for the Dock, and the bundle script makes `AppIcon.icns` from it through `examples/app_iconset.rs`. The user manual is `assets/help/manual.html`. The app does not show HTML: "Help" writes a copy of the manual to the temporary folder and opens it in the system web browser (`ui/help.rs`, `platform::open_in_browser`). The copy shows the app version: the text `{{version}}` in the manual is replaced with the version from `Cargo.toml`.
+- Icons are Material SVG files in `assets/icons/` (see its README). The app icon is `assets/app-icon/app-icon.svg`: `ui/app_icon.rs` draws it for the Dock or the task bar, the macOS bundle script makes `AppIcon.icns` from it through `examples/app_iconset.rs`, and on Windows `build.rs` puts it in the executable. The user manual is `assets/help/manual.html`. The app does not show HTML: "Help" writes a copy of the manual to the temporary folder and opens it in the system web browser (`ui/help.rs`, `platform::open_in_browser`). The copy shows the app version: the text `{{version}}` in the manual is replaced with the version from `Cargo.toml`.
 
 ## Rules for a behavior change
 
@@ -84,3 +99,4 @@ Specs, README, the manual, and code comments use short and direct sentences (Sim
 - "Help" in a script does not open the web browser. It writes the manual file and prints its path (`help manual=<path>`).
 - The first launch after a build can lose a pointer event. Do one short warm-up launch before a test with clicks.
 - `MULTI_VIDEO_PLAYER_DECODE=software` or `copy` turns off hardware decode or zero copy, to test the other decode paths.
+- Windows: the window of a test opens on the screen of the user and takes the focus. A release build with no `selftest` feature has no console, so use the `selftest` build for scripts. In a shell pipeline, read the exit code of the app itself: a crash at exit is hidden when only the output of a later command is checked.

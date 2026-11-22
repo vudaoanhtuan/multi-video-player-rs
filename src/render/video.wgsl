@@ -6,6 +6,11 @@ struct Params {
     yuv_to_rgb: mat4x4<f32>,
     // x > 0.5: the render target is sRGB, so write linear values.
     options: vec4<f32>,
+    // The part of the textures that holds the picture. xy: the texture
+    // position of the bottom right corner of the picture. zw: the largest
+    // position that a sample can use, so that a sample never reads outside
+    // the picture.
+    crop: vec4<f32>,
 };
 
 @group(0) @binding(0) var<uniform> params: Params;
@@ -24,11 +29,12 @@ fn vs_main(@builtin(vertex_index) index: u32) -> VertexOutput {
     let y = f32(index >> 1u);
     var out: VertexOutput;
     out.position = vec4<f32>(x * 2.0 - 1.0, 1.0 - y * 2.0, 0.0, 1.0);
-    out.uv = vec2<f32>(x, y);
+    out.uv = vec2<f32>(x, y) * params.crop.xy;
     return out;
 }
 
-fn sample_yuv(uv: vec2<f32>) -> vec3<f32> {
+fn sample_yuv(position: vec2<f32>) -> vec3<f32> {
+    let uv = min(position, params.crop.zw);
     let luma = textureSampleLevel(luma_texture, plane_sampler, uv, 0.0).r;
     let chroma = textureSampleLevel(chroma_texture, plane_sampler, uv, 0.0).rg;
     return vec3<f32>(luma, chroma);
