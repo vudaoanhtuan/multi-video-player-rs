@@ -58,7 +58,7 @@ else:
 
 - Speed changes the rate of the clock only. All cameras stay in sync because they follow the clock.
 - At high speed the app can skip frames. It must not slow the clock.
-- From the speed of the "Key frames only from" setting (default 8x), a camera shows key frames only. This rule applies to a video only if its key frames come at least 2 times each real second at the current speed. In other cases the camera decodes all frames. See "Settings" in [controls-and-layout.md](controls-and-layout.md).
+- From the speed of the "Key frames only from" setting (default 4x), a camera shows key frames only. This rule applies to a video only if its key frames come at least 2 times each real second at the current speed. In other cases the camera decodes all frames. See "Settings" in [controls-and-layout.md](controls-and-layout.md).
 - The 5 second rule for opening the next chunk uses real time, so it starts earlier on the timeline at high speed.
 
 ## Hidden cameras

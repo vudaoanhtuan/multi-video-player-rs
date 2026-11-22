@@ -86,7 +86,7 @@
   <tr><td>Cameras button (video camera icon)</td><td>Opens the camera picker. The numbers show how many cameras are shown, for example 3/5.</td></tr>
   <tr><td>Menu button</td><td>Open Folder, Close Folder, Settings (opens the settings dialog), Help.</td></tr>
 </table>
-<p>At a high speed the app can show key frames only, so the picture changes in steps. The clock speed stays correct. The "Key frames only from" setting gives the speed at which this starts. The default is 8x.</p>
+<p>At a high speed the app can show key frames only, so the picture changes in steps. The clock speed stays correct. The "Key frames only from" setting gives the speed at which this starts. The default is 4x.</p>
 
 <h2>Go to a time</h2>
 <ol>
@@ -130,7 +130,7 @@
 <h2>Settings</h2>
 <ol>
   <li>Open the menu button, then click "Settings…". The settings dialog opens.</li>
-  <li>Click the options that you want. For "Key frames only from", click the number box and type a number from 2 to 20. You can also drag the box to the left or to the right.</li>
+  <li>Click the options that you want. For "Key frames only from", click the number box and type a number that is more than 0. You can also drag the box to the left or to the right.</li>
   <li>Click Apply or press <kbd>Enter</kbd> to use the new settings. Click Cancel or press <kbd>Esc</kbd> to keep the settings as they were.</li>
 </ol>
 <table>
@@ -141,13 +141,13 @@
   <tr><td>Camera name</td><td>Show</td><td>Each tile shows the camera name in its top left corner.</td></tr>
   <tr><td>Decoder</td><td>Hardware</td><td>The video decoder of the GPU decodes the videos. This is the default. It uses less CPU power.</td></tr>
   <tr><td>Decoder</td><td>Software</td><td>The CPU decodes the videos. Use it if the picture is not correct with the hardware decoder.</td></tr>
-  <tr><td>Key frames only from</td><td>A number from 2 to 20</td><td>At this speed and at each higher speed, the app shows key frames only. The default is 8.</td></tr>
+  <tr><td>Key frames only from</td><td>A number more than 0</td><td>From this speed, the app shows key frames only. The default is 4.</td></tr>
 </table>
 <ul>
   <li>The changes in the dialog have no effect until you click Apply.</li>
   <li>After a change of the decoder, the tiles are black for a moment. The clock time, the speed, and the shown cameras do not change.</li>
   <li>If the computer has no hardware decoder that the app can use, the "Hardware" option is disabled.</li>
-  <li>A number below 2 becomes 2, and a number above 16 becomes 16.</li>
+  <li>For "Key frames only from", a number below 1 becomes 1. There is no highest number.</li>
   <li>A lower number for "Key frames only from" decreases the work of the computer at that speed, but the picture changes in steps. Type a higher number to see all frames at more speeds.</li>
   <li>The app shows key frames only if the video has key frames often enough: at least 2 for each second of real time at the current speed. In other cases it shows all frames that it can decode in time.</li>
   <li>The settings return to the defaults when the app starts.</li>

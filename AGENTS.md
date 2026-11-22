@@ -58,7 +58,7 @@ egui/eframe 0.37, wgpu 30, and ffmpeg-sys-next 9 are recent, and their APIs diff
 - Each `CameraPlayer` has a worker thread that decodes ahead of the clock into a small queue of `Slot`s. A slot is a frame or a "black" marker, with its time of day.
 - On each refresh the UI thread calls `CameraPlayer::update`, which takes the latest slot that is not after the clock time. The UI thread never decodes and never waits.
 - Frames of an old epoch are never shown. A tile is black after a jump until the exact frame is ready. This is a spec rule, not a fault.
-- The worker opens the next chunk on a helper thread before the clock reaches it, skips to key frames when it is late, and decodes key frames only from the speed of the "Key frames only from" setting (default 8x, `CameraPlayer::set_key_only_min_speed`).
+- The worker opens the next chunk on a helper thread before the clock reaches it, skips to key frames when it is late, and decodes key frames only from the speed of the "Key frames only from" setting (default 4x, `CameraPlayer::set_key_only_min_speed`).
 - A change to the clock must be followed by `wake()` on all players. The `Session` methods do this. Use them, not the `Clock` directly.
 
 ### Frames and rendering

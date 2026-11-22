@@ -343,14 +343,14 @@ fn key_only_min_speed_sets_where_key_frames_only_start() {
     // Key frames are 1 second apart. At 4x that is 4 key frames each real second.
     let is_key = |pos: &i64| pos % MICROS_PER_SEC == 0;
 
-    // Default limit of 8x: 4x shows frames between the key frames.
+    // Default limit of 4x: 4x shows key frames only.
     let seen = frames_at_4x(None);
-    assert!(seen.iter().any(|pos| !is_key(pos)), "default: only key frames at 4x: {seen:?}");
+    assert!(seen.len() >= 2, "default: {seen:?}");
+    assert!(seen.iter().all(is_key), "default: a frame is not a key frame: {seen:?}");
 
-    // Limit of 4x: 4x shows key frames only.
-    let seen = frames_at_4x(Some(4.0));
-    assert!(seen.len() >= 2, "limit 4x: {seen:?}");
-    assert!(seen.iter().all(is_key), "limit 4x: a frame is not a key frame: {seen:?}");
+    // Limit of 8x: 4x shows frames between the key frames.
+    let seen = frames_at_4x(Some(8.0));
+    assert!(seen.iter().any(|pos| !is_key(pos)), "limit 8x: only key frames at 4x: {seen:?}");
 }
 
 #[test]

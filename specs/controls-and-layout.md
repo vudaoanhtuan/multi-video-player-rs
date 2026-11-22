@@ -206,11 +206,13 @@ The control bar is one row at the bottom of the window. From left to right:
 
 ### Key frames only from
 
-- "Key frames only from" is a number box. Its value is a whole number from 2 to 20. The box shows the value with an "x", for example "8x".
-- The default is 8.
+- "Key frames only from" is a number box. Its value is a whole number that is more than 0. There is no highest value. The box shows the value with an "x", for example "4x".
+- The default is 4.
+- The dialog shows one short sentence below the box: "From this speed, the app shows key frames only."
 - To change the value, the user clicks the box and types a number. A drag on the box to the left or to the right also changes the value.
 - The Enter key in the box does the same as Apply, with the typed number.
-- A typed number below 2 becomes 2. A typed number above 20 becomes 20. Text that is not a number does not change the value.
+- A typed number below 1 becomes 1. Text that is not a number does not change the value.
+- With a value above the highest speed, a camera shows all frames at each speed, unless it is late.
 - At the speed of the value and at each higher speed, a camera shows key frames only, if its video has key frames often enough. See "Speed" in [synced-playback.md](synced-playback.md).
 - Below that speed, a camera shows all frames, unless it is late.
 - After Apply, a change applies immediately to all shown cameras, in play or in pause. The decode does not start again, and the tiles do not go black.
@@ -265,8 +267,8 @@ The control bar is one row at the bottom of the window. From left to right:
 - A click on "Software" in the settings dialog while playing does not change the decode. A click on Apply then closes the dialog. The clock continues, and all tiles show frames again after a moment.
 - After the app starts, the tiles show no camera id label. A click on "Show" for "Camera name" and then on Apply shows the camera id in the top left corner of each tile.
 - A click on "None" and then on Cancel leaves the video ratio at "16:9". The dialog shows "16:9" when it opens again.
-- A click on the "Key frames only from" box, the text `4`, and Enter closes the dialog and sets the value to 4. The text `40` and Apply sets the value to 20.
-- With "Key frames only from" at 4 and a speed of 4x, a video with one key frame each second changes its picture 4 times each real second. With the default of 8, the same video at 4x shows the frames between the key frames.
+- A click on the "Key frames only from" box, the text `6`, and Enter closes the dialog and sets the value to 6. The text `40` and Apply sets the value to 40. The text `0` and Apply sets the value to 1.
+- With the default of 4 and a speed of 4x, a video with one key frame each second changes its picture 4 times each real second. With "Key frames only from" at 8, the same video at 4x shows the frames between the key frames.
 - The Escape key closes the settings dialog with no change. The space key does not change the play state while the dialog is open.
 - "Help" in the menu opens the manual in the web browser, with and without an open folder. The manual lists each hotkey of the app.
 - The window title shows the app name, the version, and the path of the open folder. After "Close Folder", it shows the name and the version only.

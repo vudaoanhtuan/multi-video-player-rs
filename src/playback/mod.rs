@@ -22,7 +22,7 @@ use crate::time::Timestamp;
 pub type Waker = Arc<dyn Fn(Duration) + Send + Sync>;
 
 /// The default lowest speed at which a camera shows key frames only.
-pub const DEFAULT_KEY_ONLY_MIN_SPEED: f64 = 8.0;
+pub const DEFAULT_KEY_ONLY_MIN_SPEED: f64 = 4.0;
 
 /// What a tile shows from `time` until the time of the next slot.
 pub struct Slot {

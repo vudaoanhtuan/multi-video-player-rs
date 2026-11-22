@@ -1,8 +1,6 @@
 //! User settings, and the settings dialog that changes them.
 //! See `specs/controls-and-layout.md`.
 
-use std::ops::RangeInclusive;
-
 use egui::{Context, Key, RichText};
 
 use crate::playback::DEFAULT_KEY_ONLY_MIN_SPEED;
@@ -64,7 +62,7 @@ pub struct Settings {
     pub show_camera_name: bool,
     pub decoder: Decoder,
     /// From this speed, a camera shows key frames only, if its video has key
-    /// frames often enough. A whole number in [`KEY_ONLY_MIN_SPEED_RANGE`].
+    /// frames often enough. A whole number, [`KEY_ONLY_MIN_SPEED_MIN`] or more.
     pub key_only_min_speed: f64,
 }
 
@@ -79,9 +77,10 @@ impl Default for Settings {
     }
 }
 
-/// The permitted values of the "Key frames only from" setting. At 1x a
-/// camera always shows all frames, and 20x is the highest speed of the app.
-pub const KEY_ONLY_MIN_SPEED_RANGE: RangeInclusive<u32> = 2..=20;
+/// The lowest value of the "Key frames only from" setting. The value must be
+/// more than 0. There is no highest value: with a value above the highest
+/// speed, a camera shows key frames only when it is late.
+pub const KEY_ONLY_MIN_SPEED_MIN: u32 = 1;
 
 /// How the user closed the settings dialog.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -138,18 +137,10 @@ pub fn show_dialog(ctx: &Context, settings: &mut Settings, hardware_available: b
         ui.horizontal(|ui| {
             // A number box: the user types a value or drags the box.
             let mut speed = settings.key_only_min_speed.round() as u32;
-            let (min, max) = (*KEY_ONLY_MIN_SPEED_RANGE.start(), *KEY_ONLY_MIN_SPEED_RANGE.end());
-            ui.add(egui::DragValue::new(&mut speed).range(KEY_ONLY_MIN_SPEED_RANGE).speed(0.05).suffix("x"));
-            settings.key_only_min_speed = f64::from(speed.clamp(min, max));
-            ui.label(RichText::new(format!("A number from {min} to {max}")).weak());
+            ui.add(egui::DragValue::new(&mut speed).range(KEY_ONLY_MIN_SPEED_MIN..=u32::MAX).speed(0.05).suffix("x"));
+            settings.key_only_min_speed = f64::from(speed.max(KEY_ONLY_MIN_SPEED_MIN));
         });
-        ui.label(
-            RichText::new(
-                "From this speed, a camera shows key frames only, if its video has key frames often enough. \
-                 The picture then changes in steps.",
-            )
-            .weak(),
-        );
+        ui.label(RichText::new("From this speed, the app shows key frames only.").weak());
 
         ui.add_space(4.0);
         ui.separator();
@@ -179,17 +170,15 @@ mod tests {
     }
 
     #[test]
-    fn default_key_only_speed_is_8x_and_is_an_option() {
-        let default = Settings::default().key_only_min_speed;
-        assert_eq!(default, 8.0);
-        assert!(KEY_ONLY_MIN_SPEED_RANGE.contains(&(default as u32)));
+    fn default_key_only_speed_is_4x() {
+        assert_eq!(Settings::default().key_only_min_speed, 4.0);
     }
 
     #[test]
-    fn key_only_speed_range_is_above_1x_up_to_the_highest_speed() {
-        let highest = crate::clock::SPEEDS.into_iter().fold(0.0, f64::max);
-        assert_eq!(*KEY_ONLY_MIN_SPEED_RANGE.start(), 2);
-        assert_eq!(f64::from(*KEY_ONLY_MIN_SPEED_RANGE.end()), highest);
+    fn lowest_key_only_speed_is_1x() {
+        // The value must be more than 0.
+        assert_eq!(KEY_ONLY_MIN_SPEED_MIN, 1);
+        assert!(Settings::default().key_only_min_speed >= f64::from(KEY_ONLY_MIN_SPEED_MIN));
     }
 
     #[test]

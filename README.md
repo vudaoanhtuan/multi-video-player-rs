@@ -101,7 +101,7 @@ The script makes `dist\Multi Video Player.exe`. The app is one executable of abo
 | `[` / `]` | Jump 30 seconds back / forward. With Shift: 10 minutes |
 | C, or the cameras button (video camera icon) | Open the camera picker |
 | Cmd+O (Ctrl+O on Windows) | Open a folder |
-| Menu button (three dots) | "Open Folder…", "Close Folder", "Settings…" (opens the settings dialog. Video ratio: "16:9" stretches each video to 16:9, "None" keeps the shape of the video. Camera name: "Show" puts the camera id in the top left corner of each tile, default "Hide". Decoder: "Hardware" or "Software". Key frames only from: the lowest speed that shows key frames only, default 8x), and "Help" (opens the user manual with all hotkeys in the web browser) |
+| Menu button (three dots) | "Open Folder…", "Close Folder", "Settings…" (opens the settings dialog. Video ratio: "16:9" stretches each video to 16:9, "None" keeps the shape of the video. Camera name: "Show" puts the camera id in the top left corner of each tile, default "Hide". Decoder: "Hardware" or "Software". Key frames only from: the lowest speed that shows key frames only, default 4x), and "Help" (opens the user manual with all hotkeys in the web browser) |
 | G | Open the "go to time" dialog. Type or paste `HH:mm:ss` or `HHmmss` |
 | Shift+G | Jump to the time in the clipboard, if the clipboard text is `HH:mm:ss` or `HHmmss` |
 | T, or a click on the timer | Pause and copy the clock time |
@@ -127,7 +127,7 @@ The script makes `dist\Multi Video Player.exe`. The app is one executable of abo
 - On each screen refresh, the UI thread takes the latest queue entry that is not after the clock time. The UI thread never decodes and never waits.
 - A jump changes the clock epoch. Frames of an old epoch are not shown, so a tile is black until the exact frame for the new time is ready.
 - The next chunk is opened on a helper thread 6 seconds of real time before the clock reaches it. Its first frame is decoded at that time.
-- A decoder that is late skips to key frames. From the speed of the "Key frames only from" setting (default 8x), the decoder shows key frames only, if key frames come at least 2 times each real second.
+- A decoder that is late skips to key frames. From the speed of the "Key frames only from" setting (default 4x), the decoder shows key frames only, if key frames come at least 2 times each real second.
 
 ### Performance
 
