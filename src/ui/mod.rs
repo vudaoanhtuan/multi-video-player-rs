@@ -92,8 +92,10 @@ pub struct App {
     title: String,
     notice: Option<Notice>,
     settings: settings::Settings,
-    /// The settings dialog is open. It does not belong to a session: it also works with no folder open.
-    settings_open: bool,
+    /// The values of the open settings dialog. They are not in use until the
+    /// user applies them. The dialog does not belong to a session: it also
+    /// works with no folder open.
+    settings_draft: Option<settings::Settings>,
     clipboard: clipboard::Clipboard,
     /// Shift+G asked for the clipboard text. A valid time in it starts a jump.
     clipboard_jump: bool,
@@ -155,7 +157,7 @@ impl App {
             title: window_title(None),
             notice: None,
             settings,
-            settings_open: false,
+            settings_draft: None,
             clipboard: clipboard::Clipboard::default(),
             clipboard_jump: false,
             last_refresh: Instant::now(),
@@ -176,15 +178,19 @@ impl App {
         }
     }
 
-    /// Shows the settings dialog when it is open, and applies a change.
+    /// Shows the settings dialog when it is open. "Apply" puts its values in use.
     fn show_settings(&mut self, ctx: &egui::Context) {
-        if !self.settings_open {
-            return;
+        let Some(draft) = self.settings_draft.as_mut() else { return };
+        let Some(result) = settings::show_dialog(ctx, draft, self.hw_decode.is_some()) else { return };
+        let Some(new) = self.settings_draft.take() else { return };
+        if result == settings::DialogResult::Apply {
+            self.apply_settings(new, ctx);
         }
-        let before = self.settings;
-        if settings::show_dialog(ctx, &mut self.settings, self.hw_decode.is_some()) {
-            self.settings_open = false;
-        }
+    }
+
+    /// Puts new settings in use.
+    fn apply_settings(&mut self, new: settings::Settings, ctx: &egui::Context) {
+        let before = std::mem::replace(&mut self.settings, new);
         if self.settings == before {
             return;
         }
@@ -319,7 +325,7 @@ impl App {
             }
         }
 
-        let dialog = self.settings_open || session.goto.is_some() || session.picker.is_some() || session.bbox.is_dialog();
+        let dialog = self.settings_draft.is_some() || session.goto.is_some() || session.picker.is_some() || session.bbox.is_dialog();
         if dialog || ctx.text_edit_focused() {
             return;
         }
@@ -439,7 +445,7 @@ impl App {
                     match &self.state {
                         State::Ready(_) => {}
                         State::NoFolder => {
-                            let settings = if self.settings_open { "open" } else { "closed" };
+                            let settings = if self.settings_draft.is_some() { "open" } else { "closed" };
                             println!("stats state=no-folder title={:?} | settings={settings}", self.title);
                         }
                         State::Loading { .. } => println!("stats state=loading"),
@@ -466,7 +472,7 @@ impl App {
                             }
                         }
                         line += &format!(" | goto={}", if session.goto.is_some() { "open" } else { "closed" });
-                        line += &format!(" | settings={}", if self.settings_open { "open" } else { "closed" });
+                        line += &format!(" | settings={}", if self.settings_draft.is_some() { "open" } else { "closed" });
                         line += &match &session.bbox {
                             bbox::BboxMode::Off => " | bbox=off".to_owned(),
                             bbox::BboxMode::PickCamera => " | bbox=pick".to_owned(),
@@ -568,7 +574,7 @@ impl eframe::App for App {
         match bar_action {
             Some(controls::BarAction::OpenFolder) => want_open = true,
             Some(controls::BarAction::CloseFolder) => self.close_folder(),
-            Some(controls::BarAction::OpenSettings) => self.settings_open = true,
+            Some(controls::BarAction::OpenSettings) => self.settings_draft = Some(self.settings),
             Some(controls::BarAction::ShowHelp) => self.show_help(),
             None => {}
         }

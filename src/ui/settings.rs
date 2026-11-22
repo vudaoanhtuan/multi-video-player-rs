@@ -3,7 +3,7 @@
 
 use std::ops::RangeInclusive;
 
-use egui::{Context, RichText};
+use egui::{Context, Key, RichText};
 
 use crate::playback::DEFAULT_KEY_ONLY_MIN_SPEED;
 
@@ -80,13 +80,22 @@ impl Default for Settings {
 /// camera always shows all frames, and 16x is the highest speed of the app.
 pub const KEY_ONLY_MIN_SPEED_RANGE: RangeInclusive<u32> = 2..=16;
 
-/// Shows the settings dialog on top of the grid. A change of an option is
-/// written to `settings` immediately, and the dialog stays open.
+/// How the user closed the settings dialog.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum DialogResult {
+    /// Use the values of the dialog.
+    Apply,
+    /// Keep the settings as they were.
+    Cancel,
+}
+
+/// Shows the settings dialog on top of the grid. `settings` holds the values
+/// of the dialog. They are not in use until the user applies them.
 /// `hardware_available` is false when the computer has no hardware decoder
 /// that the app can use. The "Hardware" option is then disabled.
-/// Returns `true` when the user closed the dialog.
-pub fn show_dialog(ctx: &Context, settings: &mut Settings, hardware_available: bool) -> bool {
-    let mut close = false;
+/// Returns a result when the user closed the dialog.
+pub fn show_dialog(ctx: &Context, settings: &mut Settings, hardware_available: bool) -> Option<DialogResult> {
+    let (mut apply, mut cancel) = (false, false);
     let modal = egui::Modal::new(egui::Id::unique("settings")).show(ctx, |ui| {
         ui.set_width(320.0);
         ui.heading("Settings");
@@ -116,18 +125,10 @@ pub fn show_dialog(ctx: &Context, settings: &mut Settings, hardware_available: b
 
         ui.label(RichText::new("Key frames only from").strong());
         ui.horizontal(|ui| {
-            // A number box: the user types a value or drags the box. A typed
-            // value applies at Enter or when the box loses the focus, so a
-            // value that is not complete does not change the playback.
+            // A number box: the user types a value or drags the box.
             let mut speed = settings.key_only_min_speed.round() as u32;
             let (min, max) = (*KEY_ONLY_MIN_SPEED_RANGE.start(), *KEY_ONLY_MIN_SPEED_RANGE.end());
-            ui.add(
-                egui::DragValue::new(&mut speed)
-                    .range(KEY_ONLY_MIN_SPEED_RANGE)
-                    .speed(0.05)
-                    .suffix("x")
-                    .update_while_editing(false),
-            );
+            ui.add(egui::DragValue::new(&mut speed).range(KEY_ONLY_MIN_SPEED_RANGE).speed(0.05).suffix("x"));
             settings.key_only_min_speed = f64::from(speed.clamp(min, max));
             ui.label(RichText::new(format!("A number from {min} to {max}")).weak());
         });
@@ -142,11 +143,19 @@ pub fn show_dialog(ctx: &Context, settings: &mut Settings, hardware_available: b
         ui.add_space(4.0);
         ui.separator();
         ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-            close = ui.button("Close").clicked();
+            apply = ui.button("Apply").clicked();
+            cancel = ui.button("Cancel").clicked();
         });
     });
-    // The Close button, Escape, or a click outside.
-    close || modal.should_close()
+
+    if apply || ctx.input(|i| i.key_pressed(Key::Enter)) {
+        Some(DialogResult::Apply)
+    } else if cancel || modal.should_close() {
+        // Cancel, Escape, or a click outside: no change.
+        Some(DialogResult::Cancel)
+    } else {
+        None
+    }
 }
 
 #[cfg(test)]
