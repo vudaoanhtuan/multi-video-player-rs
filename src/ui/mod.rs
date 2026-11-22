@@ -14,7 +14,7 @@ mod selftest;
 mod session;
 mod settings;
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::mpsc::{self, Receiver};
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -43,6 +43,20 @@ const COPIED_NOTICE_TIME: Duration = Duration::from_secs(2);
 /// How long other short messages stay on screen.
 const MESSAGE_NOTICE_TIME: Duration = Duration::from_secs(4);
 
+/// The dot between the parts of the window title.
+const TITLE_SEPARATOR: &str = " \u{b7} ";
+
+/// The text of the window title: the app name, the version, and the folder
+/// that is open, with a dot between the parts.
+pub fn window_title(folder: Option<&Path>) -> String {
+    let mut title = format!("{}{TITLE_SEPARATOR}{}", crate::APP_NAME, crate::APP_VERSION);
+    if let Some(folder) = folder {
+        title += TITLE_SEPARATOR;
+        title += &folder.display().to_string();
+    }
+    title
+}
+
 enum State {
     NoFolder,
     Loading { result: Receiver<Result<ScanResult, String>> },
@@ -65,6 +79,10 @@ pub struct App {
     has_native_menu: bool,
     _menu: Option<AppMenu>,
     state: State,
+    /// The folder that the user opened. It stays until the user closes it.
+    folder: Option<PathBuf>,
+    /// The window title that the window has now.
+    title: String,
     notice: Option<Notice>,
     settings: settings::Settings,
     clipboard: clipboard::Clipboard,
@@ -86,8 +104,8 @@ impl App {
         let support = platform::video_support(&render_state.device);
         let mut decode = DecodeOptions { hw: support.hw_decode };
         let mut importer = support.importer;
-        // For tests and problem reports: VIDEO_PLAYER_DECODE=software | copy
-        match std::env::var("VIDEO_PLAYER_DECODE").as_deref() {
+        // For tests and problem reports: MULTI_VIDEO_PLAYER_DECODE=software | copy
+        match std::env::var("MULTI_VIDEO_PLAYER_DECODE").as_deref() {
             Ok("software") => decode.hw = None,
             Ok("copy") => {
                 importer = None;
@@ -119,6 +137,8 @@ impl App {
             has_native_menu: menu.is_some(),
             _menu: menu,
             state: State::NoFolder,
+            folder: None,
+            title: window_title(None),
             notice: None,
             settings: settings::Settings::default(),
             clipboard: clipboard::Clipboard::default(),
@@ -139,6 +159,8 @@ impl App {
         // Replacing the state drops the old session. That stops its decode threads.
         self.state = State::Loading { result };
         self.notice = None;
+        // The window title shows the full path, also for a relative path from the command line.
+        self.folder = Some(std::path::absolute(&folder).unwrap_or_else(|_| folder.clone()));
         let ctx = ctx.clone();
         std::thread::spawn(move || {
             let scan = scan_folder(&folder, &FfmpegProbe).map_err(|e| format!("Cannot read the folder: {e}"));
@@ -151,6 +173,7 @@ impl App {
     fn close_folder(&mut self) {
         // Replacing the state drops the session. That stops its decode threads.
         self.state = State::NoFolder;
+        self.folder = None;
         self.notice = None;
         self.clipboard_jump = false;
     }
@@ -172,10 +195,20 @@ impl App {
         }
     }
 
+    /// Changes the window title when the open folder changed. The command
+    /// is sent only on a change, because each command causes a refresh.
+    fn update_title(&mut self, ctx: &egui::Context) {
+        let title = window_title(self.folder.as_deref());
+        if title != self.title {
+            ctx.send_viewport_cmd(egui::ViewportCommand::Title(title.clone()));
+            self.title = title;
+        }
+    }
+
     fn choose_folder(&mut self, ctx: &egui::Context) {
         // Scripted tests cannot use the native dialog. They give the folder here.
         #[cfg(feature = "selftest")]
-        if let Some(folder) = std::env::var_os("VIDEO_PLAYER_TEST_FOLDER") {
+        if let Some(folder) = std::env::var_os("MULTI_VIDEO_PLAYER_TEST_FOLDER") {
             self.open_folder(PathBuf::from(folder), ctx);
             return;
         }
@@ -345,7 +378,7 @@ impl App {
                 selftest::Action::Stats => {
                     match &self.state {
                         State::Ready(_) => {}
-                        State::NoFolder => println!("stats state=no-folder"),
+                        State::NoFolder => println!("stats state=no-folder title={:?}", self.title),
                         State::Loading { .. } => println!("stats state=loading"),
                         State::NoVideos => println!("stats state=no-videos"),
                         State::Failed(_) => println!("stats state=failed"),
@@ -354,7 +387,7 @@ impl App {
                         let clock = session.clock.snapshot();
                         let ms = |t: crate::time::Timestamp| format!("{}.{:03}", t.format_hms(), t.time_of_day() / 1000 % 1000);
                         let mut line = format!("stats clock={} playing={} speed={}", ms(clock.time), clock.playing, clock.speed);
-                        line += &format!(" ratio={}", self.settings.video_ratio.label());
+                        line += &format!(" ratio={} title={:?}", self.settings.video_ratio.label(), self.title);
                         for tile in &session.tiles {
                             let id = &session.library.cameras[tile.camera].camera_id;
                             match tile.player.frame_time() {
@@ -530,5 +563,20 @@ impl eframe::App for App {
         if want_open {
             self.choose_folder(&ctx);
         }
+        // After all actions of this frame, so that an open or a close shows immediately.
+        self.update_title(&ctx);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn window_title_has_name_version_and_folder() {
+        let base = window_title(None);
+        assert_eq!(base, format!("Multi Video Player · {}", env!("CARGO_PKG_VERSION")));
+        let with_folder = window_title(Some(Path::new("/recordings/shop 1")));
+        assert_eq!(with_folder, format!("{base} · /recordings/shop 1"));
     }
 }

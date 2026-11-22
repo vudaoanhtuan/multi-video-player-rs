@@ -144,10 +144,10 @@ pub fn install_app_menu(on_command: Box<dyn Fn(MenuCommand) + Send + Sync>) -> O
     );
     // On macOS the first menu is the app menu. The system shows the app name as its title.
     let app_menu = Submenu::with_items(
-        "Video Player",
+        crate::APP_NAME,
         true,
         &[
-            &PredefinedMenuItem::about(Some("About Video Player"), None),
+            &PredefinedMenuItem::about(Some(&format!("About {}", crate::APP_NAME)), None),
             &PredefinedMenuItem::separator(),
             &open,
             &PredefinedMenuItem::separator(),

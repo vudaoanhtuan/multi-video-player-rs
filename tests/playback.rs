@@ -10,12 +10,12 @@ use std::process::Command;
 use std::sync::{Arc, OnceLock};
 use std::time::{Duration, Instant};
 
-use video_player::clock::Clock;
-use video_player::library::{scan_folder, Library, MediaProbe};
-use video_player::media::ffmpeg::{Decoder, FfmpegProbe};
-use video_player::media::DecodeOptions;
-use video_player::playback::{CameraPlayer, Waker};
-use video_player::time::{Timestamp, MICROS_PER_SEC};
+use multi_video_player::clock::Clock;
+use multi_video_player::library::{scan_folder, Library, MediaProbe};
+use multi_video_player::media::ffmpeg::{Decoder, FfmpegProbe};
+use multi_video_player::media::DecodeOptions;
+use multi_video_player::playback::{CameraPlayer, Waker};
+use multi_video_player::time::{Timestamp, MICROS_PER_SEC};
 
 const FRAME: i64 = 40_000; // 25 frames each second
 const MS: i64 = 1_000;
@@ -74,7 +74,7 @@ fn decode_modes() -> Vec<(&'static str, DecodeOptions)> {
     modes.push((
         "hardware",
         DecodeOptions {
-            hw: Some(video_player::media::HwDecode {
+            hw: Some(multi_video_player::media::HwDecode {
                 device_type: ffmpeg_sys_next::AVHWDeviceType::AV_HWDEVICE_TYPE_VIDEOTOOLBOX,
                 zero_copy_nv12: true,
                 zero_copy_p010: true,

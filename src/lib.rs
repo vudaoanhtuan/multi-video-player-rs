@@ -8,6 +8,11 @@
 //! - [`platform`]: the parts that depend on the operating system.
 //! - [`ui`]: the egui window.
 
+/// The name of the app, as the user sees it.
+pub const APP_NAME: &str = "Multi Video Player";
+/// The version of the app, from `Cargo.toml`.
+pub const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
+
 pub mod clock;
 pub mod library;
 pub mod media;

@@ -1,4 +1,4 @@
-# Video Player
+# Multi Video Player
 
 A native desktop app that opens a folder of camera recordings and plays all cameras at the same time of day.
 The behavior is defined in [specs/](specs/README.md).
@@ -42,10 +42,10 @@ If `cargo` stops with `failed to run custom build command for ffmpeg-sys-next` a
 
 ```sh
 ./scripts/bundle-macos.sh
-open "dist/Video Player.app"
+open "dist/Multi Video Player.app"
 ```
 
-The script makes `dist/Video Player.app`. The app is one executable of about 18 MB with FFmpeg inside. You can move it to `/Applications` and open it with a double-click.
+The script makes `dist/Multi Video Player.app`. The app is one executable of about 18 MB with FFmpeg inside. You can move it to `/Applications` and open it with a double-click.
 
 - The script runs `scripts/build-ffmpeg.sh` first, then makes a normal release build and packs it.
 - The app runs on the CPU type of the Mac that built it (Apple Silicon or Intel).
@@ -139,7 +139,7 @@ The app icon is one SVG file: `assets/app-icon/app-icon.svg`. To change the icon
 
 ## Development tools
 
-- `VIDEO_PLAYER_DECODE=software` or `VIDEO_PLAYER_DECODE=copy` turns off hardware decode or zero copy. Use it to compare the decode paths.
+- `MULTI_VIDEO_PLAYER_DECODE=software` or `MULTI_VIDEO_PLAYER_DECODE=copy` turns off hardware decode or zero copy. Use it to compare the decode paths.
 - `RUST_LOG=info` prints the decode setup. `RUST_LOG=debug` also shows FFmpeg warnings.
 - `cargo build --release --features selftest` adds a script tool that sends keys and clicks to the real window, saves window pictures, and prints the frame time of each tile. See `src/ui/selftest.rs`.
 

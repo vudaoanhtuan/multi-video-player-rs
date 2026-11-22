@@ -10,11 +10,11 @@ fn main() -> eframe::Result {
     let folder = std::env::args_os().nth(1).map(PathBuf::from).filter(|p| p.is_dir());
 
     let mut viewport = egui::ViewportBuilder::default()
-        .with_title("Video Player")
+        .with_title(multi_video_player::ui::window_title(None))
         .with_inner_size([1280.0, 800.0])
         .with_min_inner_size([640.0, 360.0]);
     // The icon in the Dock or the task bar. Without it, eframe shows its own icon.
-    if let Some(icon) = video_player::ui::app_icon::icon_data() {
+    if let Some(icon) = multi_video_player::ui::app_icon::icon_data() {
         viewport = viewport.with_icon(icon);
     }
     let mut options = eframe::NativeOptions { viewport, ..Default::default() };
@@ -31,8 +31,8 @@ fn main() -> eframe::Result {
     }
 
     eframe::run_native(
-        "Video Player",
+        multi_video_player::APP_NAME,
         options,
-        Box::new(move |cc| Ok(Box::new(video_player::ui::App::new(cc, folder)?))),
+        Box::new(move |cc| Ok(Box::new(multi_video_player::ui::App::new(cc, folder)?))),
     )
 }

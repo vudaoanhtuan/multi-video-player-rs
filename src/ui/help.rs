@@ -10,8 +10,7 @@ use std::path::PathBuf;
 const MANUAL_HTML: &str = include_str!("../../assets/help/manual.html");
 /// The manual has this text where the version number goes.
 const VERSION_PLACEHOLDER: &str = "{{version}}";
-/// The version of the app, from `Cargo.toml`.
-const APP_VERSION: &str = env!("CARGO_PKG_VERSION");
+use crate::APP_VERSION;
 
 /// The manual with the version number of this app.
 fn manual_html() -> String {
@@ -25,7 +24,7 @@ fn manual_html() -> String {
 
 /// Writes the manual to a file and returns the path.
 pub fn write_manual() -> Result<PathBuf, String> {
-    let folder = std::env::temp_dir().join("video-player");
+    let folder = std::env::temp_dir().join("multi-video-player");
     let path = folder.join("manual.html");
     std::fs::create_dir_all(&folder)
         .and_then(|()| std::fs::write(&path, manual_html()))

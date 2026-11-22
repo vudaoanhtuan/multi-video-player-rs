@@ -17,14 +17,14 @@ cargo test                                    # unit tests + end-to-end playback
 cargo test --lib time::tests::parses_typed_time     # one unit test
 cargo test --test playback paused_jump              # one end-to-end test (name filter)
 cargo clippy --all-targets --features selftest      # lint, must be clean
-./scripts/bundle-macos.sh                     # builds dist/Video Player.app (one executable)
+./scripts/bundle-macos.sh                     # builds dist/Multi Video Player.app (one executable)
 ```
 
 - The project never uses an FFmpeg of the system (Homebrew, `pkg-config`, or `ffmpeg` in `PATH`). `scripts/build-ffmpeg.sh` builds static libraries in `ffmpeg-build/prefix/` and a small `ffmpeg` command in `ffmpeg-build/tools/bin/`. `.cargo/config.toml` sets `FFMPEG_DIR` to the libraries, and all cargo commands link them statically.
 - If cargo fails in `ffmpeg-sys-next` with `'libavutil/avutil.h' file not found`, run `./scripts/build-ffmpeg.sh`.
 - `tests/playback.rs` makes small videos with `ffmpeg-build/tools/bin/ffmpeg`. Do not call a system `ffmpeg` or `ffprobe` in tests or scripts.
 - To add a decoder or another FFmpeg part, change the configure options in `scripts/build-ffmpeg.sh` and increase the number in its `WANT` line, so the script builds again.
-- `cargo build` does not update `dist/Video Player.app`. Run `scripts/bundle-macos.sh` after a change if the app bundle must have it. The bundle script uses the normal release build in `target/release`.
+- `cargo build` does not update `dist/Multi Video Player.app`. Run `scripts/bundle-macos.sh` after a change if the app bundle must have it. The bundle script uses the normal release build in `target/release`.
 
 ## Library versions
 
@@ -76,11 +76,11 @@ Specs, README, the manual, and code comments use short and direct sentences (Sim
 
 ## Testing the real window (`selftest` feature)
 
-`cargo build --release --features selftest` adds a script tool (`src/ui/selftest.rs`). The `VIDEO_PLAYER_SCRIPT` environment variable holds steps such as `1.0:key:Space;1.5:click:96,776;2.0:stats;2.2:shot:out.ppm;2.5:quit`. `stats` prints the clock, the frame time and lag of each tile, and the dialog states. `shot` writes the window picture.
+`cargo build --release --features selftest` adds a script tool (`src/ui/selftest.rs`). The `MULTI_VIDEO_PLAYER_SCRIPT` environment variable holds steps such as `1.0:key:Space;1.5:click:96,776;2.0:stats;2.2:shot:out.ppm;2.5:quit`. `stats` prints the clock, the frame time and lag of each tile, and the dialog states. `shot` writes the window picture.
 
 - The test window is usually covered by other windows, and screen capture is not permitted. The tool forces painted frames, so `shot` and `stats` still work.
 - Use the `clipboard:<text>` step first when a test copies or reads the clipboard. It replaces the system clipboard with a test clipboard, so the clipboard of the user is not changed. Never print the content of the real clipboard.
-- Do not click "Open Folder…" in a script unless `VIDEO_PLAYER_TEST_FOLDER` is set. Without it, the native folder dialog opens on the screen of the user.
+- Do not click "Open Folder…" in a script unless `MULTI_VIDEO_PLAYER_TEST_FOLDER` is set. Without it, the native folder dialog opens on the screen of the user.
 - "Help" in a script does not open the web browser. It writes the manual file and prints its path (`help manual=<path>`).
 - The first launch after a build can lose a pointer event. Do one short warm-up launch before a test with clicks.
-- `VIDEO_PLAYER_DECODE=software` or `copy` turns off hardware decode or zero copy, to test the other decode paths.
+- `MULTI_VIDEO_PLAYER_DECODE=software` or `copy` turns off hardware decode or zero copy, to test the other decode paths.

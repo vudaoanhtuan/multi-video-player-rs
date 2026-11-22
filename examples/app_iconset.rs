@@ -14,7 +14,7 @@ fn main() -> Result<(), String> {
     for points in [16u32, 32, 128, 256, 512] {
         for (scale, suffix) in [(1, ""), (2, "@2x")] {
             let name = format!("icon_{points}x{points}{suffix}.png");
-            let png = video_player::ui::app_icon::png(points * scale).ok_or("cannot draw the icon")?;
+            let png = multi_video_player::ui::app_icon::png(points * scale).ok_or("cannot draw the icon")?;
             std::fs::write(folder.join(&name), png).map_err(|e| format!("cannot write {name}: {e}"))?;
         }
     }

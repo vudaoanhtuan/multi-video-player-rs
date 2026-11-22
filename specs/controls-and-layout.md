@@ -23,6 +23,16 @@ The window shows only two parts: the camera grid and the control bar. There is n
 +----------------------------------------------------------+
 ```
 
+## Window title
+
+- The app name is "Multi Video Player".
+- The parts of the window title have a dot character (`·`) between them, with one space on each side.
+- With no folder open, the window title is the app name and the app version, for example "Multi Video Player · 0.1.0".
+- With a folder open, the title also shows the full path of the folder: "Multi Video Player · 0.1.0 · /path/to/folder".
+- The path shows from the moment the user selects the folder, also during the scan and when the folder has no videos.
+- "Close Folder" removes the path from the title.
+- The version comes from the package version of the app.
+
 ## Camera grid
 
 - One tile per shown camera, in camera id order.
@@ -175,6 +185,7 @@ The control bar is one row at the bottom of the window. From left to right:
 - The speed menu shows 1x, 2x, 4x, 8x, 16x.
 - With the default setting, a 4:3 video fills a 16:9 area in its tile. With "None", the same video is shown as 4:3.
 - "Help" in the menu opens the manual in the web browser, with and without an open folder. The manual lists each hotkey of the app.
+- The window title shows the app name, the version, and the path of the open folder. After "Close Folder", it shows the name and the version only.
 - "Close Folder" in the menu while playing shows the "open a folder" message and disables the control bar. The menu button still works.
 - "Open Folder…" in the menu, with no folder open, opens a folder. All cameras are shown and the state is paused.
 - A speed of 4x moves the shown time 4 seconds for each real second.

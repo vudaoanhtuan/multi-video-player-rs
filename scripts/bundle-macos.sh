@@ -1,16 +1,16 @@
 #!/bin/bash
-# Builds "dist/Video Player.app": one executable with FFmpeg inside.
+# Builds "dist/Multi Video Player.app": one executable with FFmpeg inside.
 # The app uses only libraries that are part of macOS. Open it with a double-click.
 #
 # Optional environment variables:
-#   BUNDLE_ID                  default: local.video-player
+#   BUNDLE_ID                  default: local.multi-video-player
 #   MACOSX_DEPLOYMENT_TARGET   oldest macOS that can run the app, default: 12.0
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-APP_NAME="Video Player"
-EXECUTABLE="video-player"
-BUNDLE_ID="${BUNDLE_ID:-local.video-player}"
+APP_NAME="Multi Video Player"
+EXECUTABLE="multi-video-player"
+BUNDLE_ID="${BUNDLE_ID:-local.multi-video-player}"
 export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
 
 "$ROOT/scripts/build-ffmpeg.sh"
@@ -61,11 +61,11 @@ cat >"$APP/Contents/Info.plist" <<PLIST
     <key>LSApplicationCategoryType</key><string>public.app-category.video</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>NSPrincipalClass</key><string>NSApplication</string>
-    <key>NSDocumentsFolderUsageDescription</key><string>Video Player reads the camera recordings in the folder that you open.</string>
-    <key>NSDesktopFolderUsageDescription</key><string>Video Player reads the camera recordings in the folder that you open.</string>
-    <key>NSDownloadsFolderUsageDescription</key><string>Video Player reads the camera recordings in the folder that you open.</string>
-    <key>NSRemovableVolumesUsageDescription</key><string>Video Player reads the camera recordings in the folder that you open.</string>
-    <key>NSNetworkVolumesUsageDescription</key><string>Video Player reads the camera recordings in the folder that you open.</string>
+    <key>NSDocumentsFolderUsageDescription</key><string>Multi Video Player reads the camera recordings in the folder that you open.</string>
+    <key>NSDesktopFolderUsageDescription</key><string>Multi Video Player reads the camera recordings in the folder that you open.</string>
+    <key>NSDownloadsFolderUsageDescription</key><string>Multi Video Player reads the camera recordings in the folder that you open.</string>
+    <key>NSRemovableVolumesUsageDescription</key><string>Multi Video Player reads the camera recordings in the folder that you open.</string>
+    <key>NSNetworkVolumesUsageDescription</key><string>Multi Video Player reads the camera recordings in the folder that you open.</string>
 </dict>
 </plist>
 PLIST

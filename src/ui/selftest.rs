@@ -1,7 +1,7 @@
 //! Development tool: runs a script of input events against the real window.
 //! Only built with `--features selftest`.
 //!
-//! The script is in the `VIDEO_PLAYER_SCRIPT` environment variable. Steps
+//! The script is in the `MULTI_VIDEO_PLAYER_SCRIPT` environment variable. Steps
 //! are separated by `;`. Each step is `<seconds>:<action>[:<argument>]`.
 //! The seconds count from the moment the folder scan is done.
 //!
@@ -52,7 +52,7 @@ pub struct Script {
 
 impl Script {
     pub fn from_env() -> Option<Self> {
-        let text = std::env::var("VIDEO_PLAYER_SCRIPT").ok()?;
+        let text = std::env::var("MULTI_VIDEO_PLAYER_SCRIPT").ok()?;
         let mut steps = Vec::new();
         for step in text.split(';').map(str::trim).filter(|s| !s.is_empty()) {
             let mut parts = step.splitn(3, ':');
