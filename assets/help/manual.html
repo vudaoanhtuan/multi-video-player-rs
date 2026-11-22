@@ -64,7 +64,8 @@
 
 <h2>Camera grid</h2>
 <ul>
-  <li>Each shown camera has one tile. The camera id is in the top left corner of the tile.</li>
+  <li>Each shown camera has one tile. The tiles are in the order of the camera names.</li>
+  <li>The camera name is the first part of the file name. To see it in the top left corner of each tile, set "Camera name" to "Show" in the settings. The default is no name.</li>
   <li>All tiles show the same time of day. This time is the clock time.</li>
   <li>A tile is black when its camera has no recording at the clock time. The other cameras continue.</li>
   <li>A tile is also black for a moment after a jump, until the correct frame is ready.</li>
@@ -132,6 +133,8 @@
   <tr><th>Setting</th><th>Option</th><th>Result</th></tr>
   <tr><td>Video ratio</td><td>16:9</td><td>Each video is stretched to 16:9. This is the default.</td></tr>
   <tr><td>Video ratio</td><td>None</td><td>Each video keeps its own shape.</td></tr>
+  <tr><td>Camera name</td><td>Hide</td><td>The tiles show the video only. This is the default.</td></tr>
+  <tr><td>Camera name</td><td>Show</td><td>Each tile shows the camera name in its top left corner.</td></tr>
   <tr><td>Decoder</td><td>Hardware</td><td>The video decoder of the GPU decodes the videos. This is the default. It uses less CPU power.</td></tr>
   <tr><td>Decoder</td><td>Software</td><td>The CPU decodes the videos. Use it if the picture is not correct with the hardware decoder.</td></tr>
   <tr><td>Key frames only from</td><td>A number from 2 to 16</td><td>At this speed and at each higher speed, the app shows key frames only. The default is 8.</td></tr>

@@ -60,6 +60,8 @@ impl Decoder {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Settings {
     pub video_ratio: VideoRatio,
+    /// Show the camera id as a label in each tile.
+    pub show_camera_name: bool,
     pub decoder: Decoder,
     /// From this speed, a camera shows key frames only, if its video has key
     /// frames often enough. A whole number in [`KEY_ONLY_MIN_SPEED_RANGE`].
@@ -70,6 +72,7 @@ impl Default for Settings {
     fn default() -> Self {
         Self {
             video_ratio: VideoRatio::default(),
+            show_camera_name: false,
             decoder: Decoder::default(),
             key_only_min_speed: DEFAULT_KEY_ONLY_MIN_SPEED,
         }
@@ -108,6 +111,14 @@ pub fn show_dialog(ctx: &Context, settings: &mut Settings, hardware_available: b
             }
         });
         ui.label(RichText::new("16:9 stretches each video to 16:9. None keeps the shape of the video.").weak());
+        ui.add_space(10.0);
+
+        ui.label(RichText::new("Camera name").strong());
+        ui.horizontal(|ui| {
+            ui.radio_value(&mut settings.show_camera_name, false, "Hide");
+            ui.radio_value(&mut settings.show_camera_name, true, "Show");
+        });
+        ui.label(RichText::new("Show puts the camera name in the top left corner of each video.").weak());
         ui.add_space(10.0);
 
         ui.label(RichText::new("Decoder").strong());
@@ -179,6 +190,11 @@ mod tests {
         let highest = crate::clock::SPEEDS.into_iter().fold(0.0, f64::max);
         assert_eq!(*KEY_ONLY_MIN_SPEED_RANGE.start(), 2);
         assert_eq!(f64::from(*KEY_ONLY_MIN_SPEED_RANGE.end()), highest);
+    }
+
+    #[test]
+    fn camera_name_is_hidden_by_default() {
+        assert!(!Settings::default().show_camera_name);
     }
 
     #[test]

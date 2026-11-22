@@ -101,7 +101,7 @@ The script makes `dist\Multi Video Player.exe`. The app is one executable of abo
 | `[` / `]` | Jump 30 seconds back / forward. With Shift: 10 minutes |
 | C, or the camera button | Open the camera picker |
 | Cmd+O (Ctrl+O on Windows) | Open a folder |
-| Menu button (three dots) | "Open Folder…", "Close Folder", "Settings…" (opens the settings dialog. Video ratio: "16:9" stretches each video to 16:9, "None" keeps the shape of the video. Decoder: "Hardware" or "Software". Key frames only from: the lowest speed that shows key frames only, default 8x), and "Help" (opens the user manual with all hotkeys in the web browser) |
+| Menu button (three dots) | "Open Folder…", "Close Folder", "Settings…" (opens the settings dialog. Video ratio: "16:9" stretches each video to 16:9, "None" keeps the shape of the video. Camera name: "Show" puts the camera id in the top left corner of each tile, default "Hide". Decoder: "Hardware" or "Software". Key frames only from: the lowest speed that shows key frames only, default 8x), and "Help" (opens the user manual with all hotkeys in the web browser) |
 | G | Open the "go to time" dialog. Type or paste `HH:mm:ss` or `HHmmss` |
 | Shift+G | Jump to the time in the clipboard, if the clipboard text is `HH:mm:ss` or `HHmmss` |
 | T, or a click on the timer | Pause and copy the clock time |

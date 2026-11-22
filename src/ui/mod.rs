@@ -507,6 +507,7 @@ impl App {
                         let mut line = format!("stats clock={} playing={} speed={}", ms(clock.time), clock.playing, clock.speed);
                         line += &format!(" ratio={} decoder={}", self.settings.video_ratio.label(), self.settings.decoder.label());
                         line += &format!(" keyonly={}", self.settings.key_only_min_speed);
+                        line += &format!(" names={}", if self.settings.show_camera_name { "shown" } else { "hidden" });
                         line += &format!(" title={:?}", self.title);
                         for tile in &session.tiles {
                             let id = &session.library.cameras[tile.camera].camera_id;
@@ -638,7 +639,7 @@ impl eframe::App for App {
                     State::Ready(session) => {
                         // Use the clock value of this refresh for all tiles, so all tiles show the same time.
                         let clock = clock.as_ref().expect("a session has a clock");
-                        next_due = grid::show(ui, session, clock, &self.renderer, self.settings.video_ratio);
+                        next_due = grid::show(ui, session, clock, &self.renderer, &self.settings);
                     }
                     State::NoFolder => {
                         want_open |= Self::message(ui, "Open a folder of camera recordings", None, true, false);

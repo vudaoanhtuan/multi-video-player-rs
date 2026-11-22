@@ -42,7 +42,7 @@ The window shows only two parts: the camera grid and the control bar. There is n
   - "16:9": stretch each video to 16:9. A video that is not 16:9 gets wider or narrower. Nothing is cut.
   - "None": keep the shape of the video.
 - Fill the unused tile area with black.
-- Show the camera id as a small label in a corner of each tile.
+- If the "Camera name" setting is "Show", show the camera id as a small label in the top left corner of each tile. The default is no label (see "Settings").
 
 ## Control bar
 
@@ -153,7 +153,7 @@ The control bar is one row at the bottom of the window. From left to right:
 
 - The menu of the menu button has a "Settings…" entry. It opens the settings dialog. The dialog appears on top of the grid.
 - The settings dialog is available in each state, also with no folder open.
-- The dialog shows three settings: "Video ratio", "Decoder", and "Key frames only from". "Video ratio" and "Decoder" each have a group of options. Exactly one option of a group is selected. "Key frames only from" has a number box.
+- The dialog shows four settings: "Video ratio", "Camera name", "Decoder", and "Key frames only from". "Video ratio", "Camera name", and "Decoder" each have a group of options. Exactly one option of a group is selected. "Key frames only from" has a number box.
 - When the dialog opens, it shows the settings that are in use.
 - A change in the dialog is not in use immediately. Playback and the grid do not change while the user changes values in the dialog.
 - The dialog has "Cancel" and "Apply" buttons.
@@ -169,6 +169,16 @@ The control bar is one row at the bottom of the window. From left to right:
 - The default is "16:9".
 - After Apply, a change applies immediately to all tiles, in play or in pause.
 - The setting does not change the decode, the clock, or the frame that a tile shows. The stretch is done when the frame is drawn.
+
+### Camera name
+
+- "Camera name" has two options: "Hide" and "Show".
+- The default is "Hide".
+- "Show": each tile shows the camera id as a small label in its top left corner, on top of the video. A black tile also shows the label.
+- "Hide": the tiles show no label.
+- After Apply, a change applies immediately to all tiles, in play or in pause.
+- The setting does not change the decode, the clock, or the frame that a tile shows.
+- The setting does not change the camera picker dialog or the bbox capture. The bbox capture dialog always shows the camera id, and the copied picture never has the label.
 
 ### Decoder
 
@@ -239,6 +249,7 @@ The control bar is one row at the bottom of the window. From left to right:
 - With the default setting, a 4:3 video fills a 16:9 area in its tile. With "None", the same video is shown as 4:3.
 - "Settings…" in the menu opens the settings dialog, with and without an open folder. "16:9" and "Hardware" are selected after the app starts.
 - A click on "Software" in the settings dialog while playing does not change the decode. A click on Apply then closes the dialog. The clock continues, and all tiles show frames again after a moment.
+- After the app starts, the tiles show no camera id label. A click on "Show" for "Camera name" and then on Apply shows the camera id in the top left corner of each tile.
 - A click on "None" and then on Cancel leaves the video ratio at "16:9". The dialog shows "16:9" when it opens again.
 - A click on the "Key frames only from" box, the text `4`, and Enter closes the dialog and sets the value to 4. The text `40` and Apply sets the value to 16.
 - With "Key frames only from" at 4 and a speed of 4x, a video with one key frame each second changes its picture 4 times each real second. With the default of 8, the same video at 4x shows the frames between the key frames.

@@ -3,7 +3,7 @@
 use egui::{Align2, Color32, FontId, Rect, Ui};
 
 use super::session::Session;
-use super::settings::VideoRatio;
+use super::settings::Settings;
 use crate::clock::Snapshot;
 use crate::render::VideoRenderer;
 use crate::time::Timestamp;
@@ -45,8 +45,9 @@ pub fn show(
     session: &mut Session,
     clock: &Snapshot,
     renderer: &VideoRenderer,
-    ratio: VideoRatio,
+    settings: &Settings,
 ) -> Option<Timestamp> {
+    let ratio = settings.video_ratio;
     let area = ui.available_rect_before_wrap();
     ui.allocate_rect(area, egui::Sense::hover());
     let painter = ui.painter_at(area);
@@ -77,12 +78,15 @@ pub fn show(
             painter.add(renderer.paint_callback(fit_rect(ratio.apply(draw.display_aspect), rect), &draw));
         }
 
-        // Camera id label in the top left corner.
-        let id = &session.library.cameras[tile.camera].camera_id;
-        let galley = painter.layout_no_wrap(id.to_string(), FontId::proportional(12.0), Color32::WHITE);
-        let label = Align2::LEFT_TOP.anchor_size(rect.min + egui::vec2(6.0, 6.0), galley.size() + egui::vec2(10.0, 4.0));
-        painter.rect_filled(label, 3.0, Color32::from_black_alpha(160));
-        painter.galley(label.min + egui::vec2(5.0, 2.0), galley, Color32::WHITE);
+        if settings.show_camera_name {
+            // Camera id label in the top left corner.
+            let id = &session.library.cameras[tile.camera].camera_id;
+            let galley = painter.layout_no_wrap(id.to_string(), FontId::proportional(12.0), Color32::WHITE);
+            let size = galley.size() + egui::vec2(10.0, 4.0);
+            let label = Align2::LEFT_TOP.anchor_size(rect.min + egui::vec2(6.0, 6.0), size);
+            painter.rect_filled(label, 3.0, Color32::from_black_alpha(160));
+            painter.galley(label.min + egui::vec2(5.0, 2.0), galley, Color32::WHITE);
+        }
 
         if picking {
             let response = ui.interact(rect, egui::Id::unique(("pick-camera", tile.camera)), egui::Sense::click());
