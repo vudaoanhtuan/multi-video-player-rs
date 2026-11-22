@@ -139,6 +139,7 @@ The control bar is one row at the bottom of the window. From left to right:
 - Playback continues while the dialog is open.
 - If the list is longer than the dialog, the list scrolls.
 - The cameras button shows a video camera icon and the count, for example "3/5". With no folder open, it shows the icon only.
+- The control bar is low, so the camera grid gets the most space. The buttons, the timer, and the speed menu have the same height, with a small space above and below them.
 - The bbox button and the cameras button have no text label. Each button shows its name and its key when the pointer is over it.
 - The icons are SVG files from the Material Icons set: `play_arrow` and `pause` for the play/pause button, `photo_camera` for the bbox button, `videocam` for the cameras button, and `more_vert` for the menu button. Keep the files in `assets/icons/`.
 - An icon has the color of the button text in each button state (normal, pointer over, pressed, disabled).

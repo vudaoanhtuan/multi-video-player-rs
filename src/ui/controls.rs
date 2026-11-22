@@ -9,7 +9,7 @@ use super::session::Session;
 use crate::clock::{Snapshot, SPEEDS};
 use crate::time::Timestamp;
 
-const BAR_HEIGHT: f32 = 44.0;
+const BAR_HEIGHT: f32 = 36.0;
 const BUTTON_HEIGHT: f32 = 28.0;
 const TIMER_WIDTH: f32 = 84.0;
 const MARKER_RADIUS: f32 = 6.5;
@@ -206,20 +206,25 @@ fn timer(ui: &mut Ui, session: &mut Session, clock: &Snapshot) {
 
 fn speed_menu(ui: &mut Ui, session: Option<&Session>, clock: Option<&Snapshot>) {
     let current = clock.map_or(1.0, |c| c.speed);
-    egui::ComboBox::from_id_salt("speed-menu")
-        .width(64.0)
-        .selected_text(speed_label(current))
-        .show_ui(ui, |ui| {
-            for speed in SPEEDS {
-                if ui.selectable_label(speed == current, speed_label(speed)).clicked() {
-                    if let Some(session) = session {
-                        session.set_speed(speed);
+    ui.scope(|ui| {
+        // The box has the height of the buttons. egui gives a combo box the
+        // smallest height of an interactive item.
+        ui.spacing_mut().interact_size.y = BUTTON_HEIGHT;
+        egui::ComboBox::from_id_salt("speed-menu")
+            .width(64.0)
+            .selected_text(speed_label(current))
+            .show_ui(ui, |ui| {
+                for speed in SPEEDS {
+                    if ui.selectable_label(speed == current, speed_label(speed)).clicked() {
+                        if let Some(session) = session {
+                            session.set_speed(speed);
+                        }
                     }
                 }
-            }
-        })
-        .response
-        .on_hover_text("Playback speed (1 to 8 for 1x to 8x)");
+            })
+            .response
+            .on_hover_text("Playback speed (1 to 8 for 1x to 8x)");
+    });
 }
 
 /// The progress bar. A click jumps, a drag jumps continuously, and the
