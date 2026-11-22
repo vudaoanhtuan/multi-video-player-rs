@@ -195,6 +195,11 @@ impl App {
                 session.set_decode(opts, &self.renderer);
             }
         }
+        if self.settings.key_only_min_speed != before.key_only_min_speed {
+            if let State::Ready(session) = &mut self.state {
+                session.set_key_only_min_speed(self.settings.key_only_min_speed);
+            }
+        }
         // The grid of this refresh was drawn with the old settings.
         ctx.request_repaint();
     }
@@ -286,6 +291,7 @@ impl App {
                     Some(library) => State::Ready(Box::new(Session::new(
                         library,
                         opts,
+                        self.settings.key_only_min_speed,
                         self.waker.clone(),
                         &self.renderer,
                     ))),
@@ -445,6 +451,7 @@ impl App {
                         let ms = |t: crate::time::Timestamp| format!("{}.{:03}", t.format_hms(), t.time_of_day() / 1000 % 1000);
                         let mut line = format!("stats clock={} playing={} speed={}", ms(clock.time), clock.playing, clock.speed);
                         line += &format!(" ratio={} decoder={}", self.settings.video_ratio.label(), self.settings.decoder.label());
+                        line += &format!(" keyonly={}", self.settings.key_only_min_speed);
                         line += &format!(" title={:?}", self.title);
                         for tile in &session.tiles {
                             let id = &session.library.cameras[tile.camera].camera_id;

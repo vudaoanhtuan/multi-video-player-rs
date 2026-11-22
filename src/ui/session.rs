@@ -64,12 +64,20 @@ pub struct Session {
     pub picker: Option<Vec<bool>>,
     pub scrub: Scrub,
     opts: DecodeOptions,
+    /// The "Key frames only from" setting. Each player gets it.
+    key_only_min_speed: f64,
     waker: Waker,
 }
 
 impl Session {
     /// All cameras shown, clock at the start of the range, paused, speed 1x.
-    pub fn new(library: Library, opts: DecodeOptions, waker: Waker, renderer: &VideoRenderer) -> Self {
+    pub fn new(
+        library: Library,
+        opts: DecodeOptions,
+        key_only_min_speed: f64,
+        waker: Waker,
+        renderer: &VideoRenderer,
+    ) -> Self {
         let clock = Arc::new(Clock::new(library.start, library.end));
         debug_assert_eq!(clock.snapshot().speed, DEFAULT_SPEED);
         let mut session = Self {
@@ -85,6 +93,7 @@ impl Session {
             picker: None,
             scrub: Scrub::default(),
             opts,
+            key_only_min_speed,
             waker,
         };
         session.set_shown(vec![true; session.library.cameras.len()], renderer);
@@ -99,16 +108,16 @@ impl Session {
             let kept = old.iter_mut().find(|t| t.as_ref().is_some_and(|t| t.camera == camera));
             let tile = match kept.and_then(Option::take) {
                 Some(tile) => tile,
-                None => Tile {
-                    camera,
-                    player: CameraPlayer::start(
+                None => {
+                    let player = CameraPlayer::start(
                         self.library.cameras[camera].clone(),
                         self.clock.clone(),
                         self.opts,
                         self.waker.clone(),
-                    ),
-                    surface: renderer.new_tile(),
-                },
+                    );
+                    player.set_key_only_min_speed(self.key_only_min_speed);
+                    Tile { camera, player, surface: renderer.new_tile() }
+                }
             };
             self.tiles.push(tile);
         }
@@ -123,6 +132,15 @@ impl Session {
         // Dropping a tile stops its decode thread.
         self.tiles.clear();
         self.set_shown(self.shown.clone(), renderer);
+    }
+
+    /// Changes the lowest speed at which the cameras show key frames only.
+    /// The decode continues. Frames that are already decoded are still shown.
+    pub fn set_key_only_min_speed(&mut self, speed: f64) {
+        self.key_only_min_speed = speed;
+        for tile in &self.tiles {
+            tile.player.set_key_only_min_speed(speed);
+        }
     }
 
     pub fn shown_count(&self) -> usize {

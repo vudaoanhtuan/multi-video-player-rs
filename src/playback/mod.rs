@@ -21,6 +21,9 @@ use crate::time::Timestamp;
 /// new slot is ready.
 pub type Waker = Arc<dyn Fn(Duration) + Send + Sync>;
 
+/// The default lowest speed at which a camera shows key frames only.
+pub const DEFAULT_KEY_ONLY_MIN_SPEED: f64 = 8.0;
+
 /// What a tile shows from `time` until the time of the next slot.
 pub struct Slot {
     pub time: Timestamp,
@@ -36,6 +39,8 @@ struct SharedState {
     /// Goes up at each event that the worker must look at.
     signal: u64,
     stop: bool,
+    /// From this speed, the worker decodes key frames only when they come often enough.
+    key_only_min_speed: f64,
 }
 
 struct Shared {
@@ -61,7 +66,13 @@ impl CameraPlayer {
     /// Starts the worker thread. The camera joins at the current clock time.
     pub fn start(camera: Arc<CameraTimeline>, clock: Arc<Clock>, opts: DecodeOptions, waker: Waker) -> Self {
         let shared = Arc::new(Shared {
-            state: Mutex::new(SharedState { epoch: u64::MAX, queue: VecDeque::new(), signal: 0, stop: false }),
+            state: Mutex::new(SharedState {
+                epoch: u64::MAX,
+                queue: VecDeque::new(),
+                signal: 0,
+                stop: false,
+                key_only_min_speed: DEFAULT_KEY_ONLY_MIN_SPEED,
+            }),
             cond: Condvar::new(),
         });
         let name = format!("decode {}", camera.camera_id);
@@ -109,6 +120,17 @@ impl CameraPlayer {
     /// Time of the slot on screen. For tests and diagnostics.
     pub fn frame_time(&self) -> Option<Timestamp> {
         self.current.as_ref().filter(|slot| slot.frame.is_some()).map(|slot| slot.time)
+    }
+
+    /// Sets the lowest speed at which the worker decodes key frames only.
+    /// The change applies to the next frame that the worker decodes.
+    pub fn set_key_only_min_speed(&self, speed: f64) {
+        {
+            let mut state = self.shared.state.lock().unwrap();
+            state.key_only_min_speed = speed;
+            state.signal += 1;
+        }
+        self.shared.cond.notify_all();
     }
 
     /// Tells the worker that the clock changed (play, pause, speed, jump).

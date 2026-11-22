@@ -26,9 +26,9 @@ const SHORT_GAP: Micros = MICROS_PER_SEC / 2;
 const MAX_LAG_SECS: f64 = 0.5;
 /// Real time allowed to reach the clock after a jump before frame skipping starts.
 const SEEK_GRACE: Duration = Duration::from_secs(2);
-/// From this speed, show key frames only when they come often enough.
-const KEY_ONLY_MIN_SPEED: f64 = 8.0;
+/// At a high speed, show key frames only when they come often enough.
 /// "Often enough": real time between two key frames at the current speed.
+/// The speed limit is `SharedState::key_only_min_speed`.
 const KEY_ONLY_MAX_REAL_INTERVAL_SECS: f64 = 0.5;
 /// Frame interval used before two frames are decoded.
 const DEFAULT_FRAME_INTERVAL: Micros = 40_000;
@@ -73,6 +73,8 @@ pub(super) struct Worker {
     unsynced_since: Instant,
     /// The decoder is late: skip to key frames until it reaches the clock.
     catching_up: bool,
+    /// Copy of `SharedState::key_only_min_speed`, read at each step.
+    key_only_min_speed: f64,
 }
 
 impl Worker {
@@ -100,6 +102,7 @@ impl Worker {
             synced: false,
             unsynced_since: Instant::now(),
             catching_up: false,
+            key_only_min_speed: super::DEFAULT_KEY_ONLY_MIN_SPEED,
         }
     }
 
@@ -112,6 +115,7 @@ impl Worker {
                 if state.stop {
                     return;
                 }
+                self.key_only_min_speed = state.key_only_min_speed;
                 state.signal
             };
             let clock = self.clock.snapshot();
@@ -237,7 +241,7 @@ impl Worker {
         let frequent_keys = decoder
             .key_interval()
             .is_some_and(|interval| interval as f64 / 1e6 / clock.speed <= KEY_ONLY_MAX_REAL_INTERVAL_SECS);
-        let key_only = clock.playing && (self.catching_up || (clock.speed >= KEY_ONLY_MIN_SPEED && frequent_keys));
+        let key_only = clock.playing && (self.catching_up || (clock.speed >= self.key_only_min_speed && frequent_keys));
 
         match decoder.next_frame(key_only) {
             Ok(Some(decoded)) => {

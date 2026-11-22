@@ -141,8 +141,8 @@ The control bar is one row at the bottom of the window. From left to right:
 
 - The menu of the menu button has a "Settings…" entry. It opens the settings dialog. The dialog appears on top of the grid.
 - The settings dialog is available in each state, also with no folder open.
-- The dialog shows two settings: "Video ratio" and "Decoder". Each setting has a group of options. Exactly one option of a group is selected.
-- A click on an option applies the change immediately. The dialog stays open.
+- The dialog shows three settings: "Video ratio", "Decoder", and "Key frames only from". "Video ratio" and "Decoder" each have a group of options. Exactly one option of a group is selected. "Key frames only from" has a number box.
+- A change applies immediately. The dialog stays open.
 - The dialog has a "Close" button. The Escape key and a click outside the dialog do the same.
 - Playback continues while the dialog is open. The hotkeys do nothing while the dialog is open.
 - Each setting has its default at each start of the app.
@@ -165,6 +165,20 @@ The control bar is one row at the bottom of the window. From left to right:
 - A change applies immediately to all shown cameras, in play or in pause. Each shown camera opens its files again with the new decoder and joins at the clock time. A tile is black until its frame is ready.
 - A change does not change the clock, the play state, the speed, or the camera choice.
 - A camera that the user shows later, and a folder that the user opens later, use the selected decoder.
+
+### Key frames only from
+
+- "Key frames only from" is a number box. Its value is a whole number from 2 to 16. The box shows the value with an "x", for example "8x".
+- The default is 8.
+- To change the value, the user clicks the box, types a number, and presses Enter. A drag on the box to the left or to the right also changes the value.
+- A typed value applies when the user presses Enter or when the box loses the focus. It does not apply during the typing.
+- A typed number below 2 becomes 2. A typed number above 16 becomes 16. Text that is not a number does not change the value.
+- The value does not have to be a speed of the speed menu. Example: with the value 10, only 16x shows key frames only.
+- At the speed of the value and at each higher speed, a camera shows key frames only, if its video has key frames often enough. See "Speed" in [synced-playback.md](synced-playback.md).
+- Below that speed, a camera shows all frames, unless it is late.
+- A change applies immediately to all shown cameras, in play or in pause. The decode does not start again, and the tiles do not go black.
+- A change does not change the clock, the play state, the speed, or the camera choice.
+- A camera that the user shows later, and a folder that the user opens later, use the value.
 
 ## Help
 
@@ -210,6 +224,8 @@ The control bar is one row at the bottom of the window. From left to right:
 - With the default setting, a 4:3 video fills a 16:9 area in its tile. With "None", the same video is shown as 4:3.
 - "Settings…" in the menu opens the settings dialog, with and without an open folder. "16:9" and "Hardware" are selected after the app starts.
 - A click on "Software" in the settings dialog while playing keeps the dialog open. The clock continues, and all tiles show frames again after a moment.
+- A click on the "Key frames only from" box, the text `4`, and Enter sets the value to 4. The text `40` and Enter sets the value to 16.
+- With "Key frames only from" at 4 and a speed of 4x, a video with one key frame each second changes its picture 4 times each real second. With the default of 8, the same video at 4x shows the frames between the key frames.
 - The Escape key closes the settings dialog. The space key does not change the play state while the dialog is open.
 - "Help" in the menu opens the manual in the web browser, with and without an open folder. The manual lists each hotkey of the app.
 - The window title shows the app name, the version, and the path of the open folder. After "Close Folder", it shows the name and the version only.

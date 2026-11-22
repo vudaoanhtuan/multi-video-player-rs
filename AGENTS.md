@@ -58,7 +58,7 @@ egui/eframe 0.37, wgpu 30, and ffmpeg-sys-next 9 are recent, and their APIs diff
 - Each `CameraPlayer` has a worker thread that decodes ahead of the clock into a small queue of `Slot`s. A slot is a frame or a "black" marker, with its time of day.
 - On each refresh the UI thread calls `CameraPlayer::update`, which takes the latest slot that is not after the clock time. The UI thread never decodes and never waits.
 - Frames of an old epoch are never shown. A tile is black after a jump until the exact frame is ready. This is a spec rule, not a fault.
-- The worker opens the next chunk on a helper thread before the clock reaches it, skips to key frames when it is late, and decodes key frames only at 8x and 16x.
+- The worker opens the next chunk on a helper thread before the clock reaches it, skips to key frames when it is late, and decodes key frames only from the speed of the "Key frames only from" setting (default 8x, `CameraPlayer::set_key_only_min_speed`).
 - A change to the clock must be followed by `wake()` on all players. The `Session` methods do this. Use them, not the `Clock` directly.
 
 ### Frames and rendering
@@ -77,7 +77,7 @@ egui/eframe 0.37, wgpu 30, and ffmpeg-sys-next 9 are recent, and their APIs diff
 - `ui/session.rs` holds one open folder: library, clock, tiles, and dialog state. Widgets do not act on the app directly. They set request fields on the session (`copy_request`, `copy_picture_request`, `message`) or return a `BarAction`, and `App` handles them.
 - The window is drawn only when necessary. While playing, `App` asks for the next refresh at the due time of the next queued frame. Do not add a continuous repaint.
 - eframe does not call `ui()` for a covered or minimized window. `App::logic` keeps a slow heartbeat for that case.
-- The settings dialog (`ui/settings.rs`) belongs to `App`, not to the session, because it also works with no folder open. `App::show_settings` applies a change. A change of the "Decoder" setting calls `Session::set_decode`, which starts the players of all shown cameras again.
+- The settings dialog (`ui/settings.rs`) belongs to `App`, not to the session, because it also works with no folder open. `App::show_settings` applies a change. A change of the "Decoder" setting calls `Session::set_decode`, which starts the players of all shown cameras again. A change of "Key frames only from" calls `Session::set_key_only_min_speed`, which does not start the players again.
 - Icons are Material SVG files in `assets/icons/` (see its README). The app icon is `assets/app-icon/app-icon.svg`: `ui/app_icon.rs` draws it for the Dock or the task bar, the macOS bundle script makes `AppIcon.icns` from it through `examples/app_iconset.rs`, and on Windows `build.rs` puts it in the executable. The user manual is `assets/help/manual.html`. The app does not show HTML: "Help" writes a copy of the manual to the temporary folder and opens it in the system web browser (`ui/help.rs`, `platform::open_in_browser`). The copy shows the app version: the text `{{version}}` in the manual is replaced with the version from `Cargo.toml`.
 
 ## Rules for a behavior change

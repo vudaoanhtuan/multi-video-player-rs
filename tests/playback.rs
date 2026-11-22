@@ -311,6 +311,48 @@ fn high_speed_skips_frames_and_keeps_the_clock_rate() {
     assert!(worst_lag < 2 * MICROS_PER_SEC, "worst lag {worst_lag} us");
 }
 
+/// Plays camera `b` at 4x for a short time. Returns the frame times that
+/// were on screen after the first second of video, as offsets in the file.
+fn frames_at_4x(key_only_min_speed: Option<f64>) -> Vec<i64> {
+    let dir = fixtures();
+    let library = library(dir);
+    let mut rig = Rig::new(&library, DecodeOptions { hw: None });
+    if let Some(speed) = key_only_min_speed {
+        rig.players.iter().for_each(|player| player.set_key_only_min_speed(speed));
+    }
+    rig.wait_until("first frames", |f| f.iter().all(Option::is_some));
+    rig.clock.set_speed(4.0);
+    rig.clock.play();
+    rig.wake();
+    let started = Instant::now();
+    let mut seen = Vec::new();
+    while started.elapsed() < Duration::from_millis(900) {
+        let (now, frames) = rig.refresh();
+        // The frames of the first second were decoded in pause. They are not key frames only.
+        if let Some(frame) = frames[1].filter(|_| now >= library.start.offset(1500 * MS)) {
+            seen.push(frame.0 - library.start.0);
+        }
+        std::thread::sleep(Duration::from_millis(4));
+    }
+    seen.dedup();
+    seen
+}
+
+#[test]
+fn key_only_min_speed_sets_where_key_frames_only_start() {
+    // Key frames are 1 second apart. At 4x that is 4 key frames each real second.
+    let is_key = |pos: &i64| pos % MICROS_PER_SEC == 0;
+
+    // Default limit of 8x: 4x shows frames between the key frames.
+    let seen = frames_at_4x(None);
+    assert!(seen.iter().any(|pos| !is_key(pos)), "default: only key frames at 4x: {seen:?}");
+
+    // Limit of 4x: 4x shows key frames only.
+    let seen = frames_at_4x(Some(4.0));
+    assert!(seen.len() >= 2, "limit 4x: {seen:?}");
+    assert!(seen.iter().all(is_key), "limit 4x: a frame is not a key frame: {seen:?}");
+}
+
 #[test]
 fn clock_stops_at_the_end_of_the_range() {
     let dir = fixtures();

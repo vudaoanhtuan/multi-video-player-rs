@@ -1,7 +1,11 @@
 //! User settings, and the settings dialog that changes them.
 //! See `specs/controls-and-layout.md`.
 
+use std::ops::RangeInclusive;
+
 use egui::{Context, RichText};
+
+use crate::playback::DEFAULT_KEY_ONLY_MIN_SPEED;
 
 /// The shape in which the videos are shown.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -53,11 +57,28 @@ impl Decoder {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Settings {
     pub video_ratio: VideoRatio,
     pub decoder: Decoder,
+    /// From this speed, a camera shows key frames only, if its video has key
+    /// frames often enough. A whole number in [`KEY_ONLY_MIN_SPEED_RANGE`].
+    pub key_only_min_speed: f64,
 }
+
+impl Default for Settings {
+    fn default() -> Self {
+        Self {
+            video_ratio: VideoRatio::default(),
+            decoder: Decoder::default(),
+            key_only_min_speed: DEFAULT_KEY_ONLY_MIN_SPEED,
+        }
+    }
+}
+
+/// The permitted values of the "Key frames only from" setting. At 1x a
+/// camera always shows all frames, and 16x is the highest speed of the app.
+pub const KEY_ONLY_MIN_SPEED_RANGE: RangeInclusive<u32> = 2..=16;
 
 /// Shows the settings dialog on top of the grid. A change of an option is
 /// written to `settings` immediately, and the dialog stays open.
@@ -91,6 +112,32 @@ pub fn show_dialog(ctx: &Context, settings: &mut Settings, hardware_available: b
             }
         });
         ui.label(RichText::new("Hardware uses the video decoder of the GPU. Software uses the CPU.").weak());
+        ui.add_space(10.0);
+
+        ui.label(RichText::new("Key frames only from").strong());
+        ui.horizontal(|ui| {
+            // A number box: the user types a value or drags the box. A typed
+            // value applies at Enter or when the box loses the focus, so a
+            // value that is not complete does not change the playback.
+            let mut speed = settings.key_only_min_speed.round() as u32;
+            let (min, max) = (*KEY_ONLY_MIN_SPEED_RANGE.start(), *KEY_ONLY_MIN_SPEED_RANGE.end());
+            ui.add(
+                egui::DragValue::new(&mut speed)
+                    .range(KEY_ONLY_MIN_SPEED_RANGE)
+                    .speed(0.05)
+                    .suffix("x")
+                    .update_while_editing(false),
+            );
+            settings.key_only_min_speed = f64::from(speed.clamp(min, max));
+            ui.label(RichText::new(format!("A number from {min} to {max}")).weak());
+        });
+        ui.label(
+            RichText::new(
+                "From this speed, a camera shows key frames only, if its video has key frames often enough. \
+                 The picture then changes in steps.",
+            )
+            .weak(),
+        );
 
         ui.add_space(4.0);
         ui.separator();
@@ -109,6 +156,20 @@ mod tests {
     #[test]
     fn default_ratio_is_16_9() {
         assert_eq!(Settings::default().video_ratio, VideoRatio::Wide16x9);
+    }
+
+    #[test]
+    fn default_key_only_speed_is_8x_and_is_an_option() {
+        let default = Settings::default().key_only_min_speed;
+        assert_eq!(default, 8.0);
+        assert!(KEY_ONLY_MIN_SPEED_RANGE.contains(&(default as u32)));
+    }
+
+    #[test]
+    fn key_only_speed_range_is_above_1x_up_to_the_highest_speed() {
+        let highest = crate::clock::SPEEDS.into_iter().fold(0.0, f64::max);
+        assert_eq!(*KEY_ONLY_MIN_SPEED_RANGE.start(), 2);
+        assert_eq!(f64::from(*KEY_ONLY_MIN_SPEED_RANGE.end()), highest);
     }
 
     #[test]
