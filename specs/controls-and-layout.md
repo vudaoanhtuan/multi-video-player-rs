@@ -23,6 +23,9 @@ The window shows only two parts: the camera grid and the control bar. There is n
 +----------------------------------------------------------+
 ```
 
+- The app opens its window maximized: the window fills the screen that it opens on. This is not the full screen mode. The title bar, and the menu bar or the task bar of the system, stay visible.
+- When the user restores the window, its size is 1280 x 800 points. The smallest window size is 640 x 360 points.
+
 ## Window title
 
 - The app name is "Multi Video Player".
@@ -232,6 +235,7 @@ The control bar is one row at the bottom of the window. From left to right:
 ## Done when
 
 - The window shows only the camera grid and the control bar. There is no camera list in the window.
+- The app opens with a maximized window.
 - A folder with 5 cameras opens with 5 tiles in a 3 column grid.
 - The camera picker dialog shows 5 checkboxes, all on, after the folder opens.
 - Two checkboxes set to off plus OK leaves 3 tiles, and the tiles fill the grid space.

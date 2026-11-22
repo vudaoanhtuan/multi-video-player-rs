@@ -26,7 +26,7 @@ Other systems use the fallback platform layer (see "Platform layer").
 
 ```sh
 ./scripts/build-ffmpeg.sh                # one time: builds FFmpeg in ffmpeg-build/ (about 1 minute)
-cargo run --release                      # opens with no folder
+cargo run --release                      # opens with no folder, the window is maximized
 cargo run --release -- /path/to/folder   # opens a folder
 cargo test                               # unit tests and end-to-end playback tests
 ```

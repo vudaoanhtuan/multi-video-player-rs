@@ -17,10 +17,15 @@ fn main() -> eframe::Result {
     // The first argument can be the folder to open.
     let folder = std::env::args_os().nth(1).map(PathBuf::from).filter(|p| p.is_dir());
 
+    // The window opens maximized: it fills the screen that it opens on. The inner
+    // size is the size of the window after the user restores it. A test script
+    // keeps that size, because its click positions are for a window of that size.
+    let scripted = cfg!(feature = "selftest") && std::env::var_os("MULTI_VIDEO_PLAYER_SCRIPT").is_some();
     let mut viewport = egui::ViewportBuilder::default()
         .with_title(multi_video_player::ui::window_title(None))
         .with_inner_size([1280.0, 800.0])
-        .with_min_inner_size([640.0, 360.0]);
+        .with_min_inner_size([640.0, 360.0])
+        .with_maximized(!scripted);
     // The icon in the Dock or the task bar. Without it, eframe shows its own icon.
     if let Some(icon) = multi_video_player::ui::app_icon::icon_data() {
         viewport = viewport.with_icon(icon);

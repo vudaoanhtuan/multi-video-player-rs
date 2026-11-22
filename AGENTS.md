@@ -95,6 +95,7 @@ Specs, README, the manual, and code comments use short and direct sentences (Sim
 `cargo build --release --features selftest` adds a script tool (`src/ui/selftest.rs`). The `MULTI_VIDEO_PLAYER_SCRIPT` environment variable holds steps such as `1.0:key:Space;1.5:click:96,776;2.0:stats;2.2:shot:out.ppm;2.5:quit`. `stats` prints the clock, the settings, the frame time and lag of each tile, the memory of its frame (`frame=hw` or `frame=cpu`), and the dialog states. `shot` writes the window picture.
 
 - The test window is usually covered by other windows, and screen capture is not permitted. The tool forces painted frames, so `shot` and `stats` still work.
+- The app opens its window maximized. With a script, the window opens at 1280 x 800 points, so the click positions of a script do not change with the screen.
 - Use the `clipboard:<text>` step first when a test copies or reads the clipboard. It replaces the system clipboard with a test clipboard, so the clipboard of the user is not changed. Never print the content of the real clipboard.
 - Do not click "Open Folder…" in a script unless `MULTI_VIDEO_PLAYER_TEST_FOLDER` is set. Without it, the native folder dialog opens on the screen of the user.
 - "Help" in a script does not open the web browser. It writes the manual file and prints its path (`help manual=<path>`).
