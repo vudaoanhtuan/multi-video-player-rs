@@ -7,8 +7,8 @@ SVG icons for the control bar. The files are not changed from the source.
 | `play_arrow.svg` | Material Icons, Filled, `play_arrow` | Play/pause button while paused |
 | `pause.svg` | Material Icons, Outlined, `pause` | Play/pause button while playing |
 | `more_vert.svg` | Material Icons, Outlined, `more_vert` | Menu button |
-| `content_cut.svg` | Material Icons, Outlined, `content_cut` | Bbox capture button |
-| `photo_camera.svg` | Material Icons, Outlined, `photo_camera` | Cameras button |
+| `photo_camera.svg` | Material Icons, Outlined, `photo_camera` | Bbox capture button |
+| `videocam.svg` | Material Icons, Outlined, `videocam` | Cameras button |
 
 Source: <https://github.com/google/material-design-icons> (folder `src/<category>/<icon>/<style>/24px.svg`, where the style folder is `materialiconsoutlined` for Outlined and `materialicons` for Filled).
 The play icon uses the Filled style, because the Outlined play icon is an empty triangle and the pause icon is solid.

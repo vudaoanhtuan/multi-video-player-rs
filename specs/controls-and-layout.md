@@ -54,8 +54,8 @@ The control bar is one row at the bottom of the window. From left to right:
 | Timer | Shows the clock time. A click on it copies the time and pauses playback. |
 | Progress bar | Shows the clock position in the total time range. Takes all spare width. |
 | Speed menu | Sets the playback speed. |
-| Bbox button | A button with a scissors icon. Starts the bbox capture. See [bbox-capture.md](bbox-capture.md). |
-| Cameras button | A button with a camera icon and the count of shown cameras. Opens the camera picker dialog. |
+| Bbox button | A button with a photo camera icon. Starts the bbox capture. See [bbox-capture.md](bbox-capture.md). |
+| Cameras button | A button with a video camera icon and the count of shown cameras. Opens the camera picker dialog. |
 | Menu button | A button with three vertical dots, at the right end. Opens a menu with "Open Folder…", "Close Folder", "Settings…", and "Help". |
 
 ## Play and pause
@@ -135,9 +135,9 @@ The control bar is one row at the bottom of the window. From left to right:
   - Cancel closes the dialog with no change. The Escape key does the same.
 - Playback continues while the dialog is open.
 - If the list is longer than the dialog, the list scrolls.
-- The cameras button shows a camera icon and the count, for example "3/5". With no folder open, it shows the icon only.
+- The cameras button shows a video camera icon and the count, for example "3/5". With no folder open, it shows the icon only.
 - The bbox button and the cameras button have no text label. Each button shows its name and its key when the pointer is over it.
-- The icons are SVG files from the Material Icons set: `play_arrow` and `pause` for the play/pause button, `content_cut` for the bbox button, `photo_camera` for the cameras button, and `more_vert` for the menu button. Keep the files in `assets/icons/`.
+- The icons are SVG files from the Material Icons set: `play_arrow` and `pause` for the play/pause button, `photo_camera` for the bbox button, `videocam` for the cameras button, and `more_vert` for the menu button. Keep the files in `assets/icons/`.
 - An icon has the color of the button text in each button state (normal, pointer over, pressed, disabled).
 - If no camera is selected, the grid is empty and the clock still works.
 

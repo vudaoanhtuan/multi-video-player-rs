@@ -11,7 +11,7 @@ Let the user copy a rectangle area of one camera frame to the clipboard as a pic
 
 ## Start
 
-- The control bar has a button with a scissors icon. The F key does the same as the button.
+- The control bar has a button with a photo camera icon. The F key does the same as the button.
 - The button or the key does two things:
   - If the clock is playing, it pauses the clock.
   - It starts the camera choice.
@@ -51,7 +51,7 @@ Let the user copy a rectangle area of one camera frame to the clipboard as a pic
 
 ## Done when
 
-- The scissors button while playing pauses playback and shows the instruction on the grid.
+- The bbox button while playing pauses playback and shows the instruction on the grid.
 - The tile under the pointer has a highlight border during the camera choice.
 - A click on a tile opens the dialog with the frame of that camera.
 - A drawn rectangle of 400 x 200 picture pixels puts a picture of 400 x 200 pixels in the clipboard.

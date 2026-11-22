@@ -43,8 +43,8 @@ impl Icon {
 static PLAY_ICON: Icon = Icon::new("bytes://icons/play_arrow.svg", include_str!("../../assets/icons/play_arrow.svg"));
 static PAUSE_ICON: Icon = Icon::new("bytes://icons/pause.svg", include_str!("../../assets/icons/pause.svg"));
 static MORE_ICON: Icon = Icon::new("bytes://icons/more_vert.svg", include_str!("../../assets/icons/more_vert.svg"));
-static SCISSORS_ICON: Icon = Icon::new("bytes://icons/content_cut.svg", include_str!("../../assets/icons/content_cut.svg"));
-static CAMERA_ICON: Icon = Icon::new("bytes://icons/photo_camera.svg", include_str!("../../assets/icons/photo_camera.svg"));
+static PHOTO_CAMERA_ICON: Icon = Icon::new("bytes://icons/photo_camera.svg", include_str!("../../assets/icons/photo_camera.svg"));
+static VIDEOCAM_ICON: Icon = Icon::new("bytes://icons/videocam.svg", include_str!("../../assets/icons/videocam.svg"));
 
 pub fn speed_label(speed: f64) -> String {
     format!("{speed}x")
@@ -94,17 +94,17 @@ pub fn show(
             action = more_menu(ui, can_close);
 
             ui.add_enabled_ui(enabled, |ui| {
-                // Cameras: a camera icon and the count of shown cameras.
+                // Cameras: a video camera icon and the count of shown cameras.
                 let count = session.as_deref().map(|s| format!("{}/{}", s.shown_count(), s.library.cameras.len()));
-                let cameras = icon_button(ui, &CAMERA_ICON, count.as_deref(), false);
+                let cameras = icon_button(ui, &VIDEOCAM_ICON, count.as_deref(), false);
                 if cameras.on_hover_text("Choose the cameras to show (C)").clicked() {
                     if let Some(session) = session.as_deref_mut() {
                         session.picker = Some(session.shown.clone());
                     }
                 }
-                // Bbox capture: a scissors icon. The button looks pressed during the camera choice.
+                // Bbox capture: a photo camera icon. The button looks pressed during the camera choice.
                 let picking = session.as_deref().is_some_and(|s| s.bbox.is_picking());
-                let bbox = icon_button(ui, &SCISSORS_ICON, None, picking);
+                let bbox = icon_button(ui, &PHOTO_CAMERA_ICON, None, picking);
                 if bbox.on_hover_text("Bbox capture: copy an area of a camera frame (F)").clicked() {
                     if let Some(session) = session.as_deref_mut() {
                         session.toggle_bbox();
