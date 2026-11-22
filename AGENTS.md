@@ -77,6 +77,7 @@ egui/eframe 0.37, wgpu 30, and ffmpeg-sys-next 9 are recent, and their APIs diff
 - `ui/session.rs` holds one open folder: library, clock, tiles, and dialog state. Widgets do not act on the app directly. They set request fields on the session (`copy_request`, `copy_picture_request`, `message`) or return a `BarAction`, and `App` handles them.
 - The window is drawn only when necessary. While playing, `App` asks for the next refresh at the due time of the next queued frame. Do not add a continuous repaint.
 - eframe does not call `ui()` for a covered or minimized window. `App::logic` keeps a slow heartbeat for that case.
+- The settings dialog (`ui/settings.rs`) belongs to `App`, not to the session, because it also works with no folder open. `App::show_settings` applies a change. A change of the "Decoder" setting calls `Session::set_decode`, which starts the players of all shown cameras again.
 - Icons are Material SVG files in `assets/icons/` (see its README). The app icon is `assets/app-icon/app-icon.svg`: `ui/app_icon.rs` draws it for the Dock or the task bar, the macOS bundle script makes `AppIcon.icns` from it through `examples/app_iconset.rs`, and on Windows `build.rs` puts it in the executable. The user manual is `assets/help/manual.html`. The app does not show HTML: "Help" writes a copy of the manual to the temporary folder and opens it in the system web browser (`ui/help.rs`, `platform::open_in_browser`). The copy shows the app version: the text `{{version}}` in the manual is replaced with the version from `Cargo.toml`.
 
 ## Rules for a behavior change
@@ -91,12 +92,12 @@ Specs, README, the manual, and code comments use short and direct sentences (Sim
 
 ## Testing the real window (`selftest` feature)
 
-`cargo build --release --features selftest` adds a script tool (`src/ui/selftest.rs`). The `MULTI_VIDEO_PLAYER_SCRIPT` environment variable holds steps such as `1.0:key:Space;1.5:click:96,776;2.0:stats;2.2:shot:out.ppm;2.5:quit`. `stats` prints the clock, the frame time and lag of each tile, and the dialog states. `shot` writes the window picture.
+`cargo build --release --features selftest` adds a script tool (`src/ui/selftest.rs`). The `MULTI_VIDEO_PLAYER_SCRIPT` environment variable holds steps such as `1.0:key:Space;1.5:click:96,776;2.0:stats;2.2:shot:out.ppm;2.5:quit`. `stats` prints the clock, the settings, the frame time and lag of each tile, the memory of its frame (`frame=hw` or `frame=cpu`), and the dialog states. `shot` writes the window picture.
 
 - The test window is usually covered by other windows, and screen capture is not permitted. The tool forces painted frames, so `shot` and `stats` still work.
 - Use the `clipboard:<text>` step first when a test copies or reads the clipboard. It replaces the system clipboard with a test clipboard, so the clipboard of the user is not changed. Never print the content of the real clipboard.
 - Do not click "Open Folder…" in a script unless `MULTI_VIDEO_PLAYER_TEST_FOLDER` is set. Without it, the native folder dialog opens on the screen of the user.
 - "Help" in a script does not open the web browser. It writes the manual file and prints its path (`help manual=<path>`).
 - The first launch after a build can lose a pointer event. Do one short warm-up launch before a test with clicks.
-- `MULTI_VIDEO_PLAYER_DECODE=software` or `copy` turns off hardware decode or zero copy, to test the other decode paths.
+- `MULTI_VIDEO_PLAYER_DECODE=software` starts the app with the "Decoder" setting at "Software". `copy` turns off zero copy. Use them to test the other decode paths.
 - Windows: the window of a test opens on the screen of the user and takes the focus. A release build with no `selftest` feature has no console, so use the `selftest` build for scripts. In a shell pipeline, read the exit code of the app itself: a crash at exit is hidden when only the output of a later command is checked.

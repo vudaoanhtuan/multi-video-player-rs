@@ -71,7 +71,7 @@
   <tr><td>Speed menu</td><td>Sets the playback speed: 1x, 2x, 3x, 4x, 5x, 6x, 7x, 8x, 16x. The keys <kbd>1</kbd> to <kbd>8</kbd> set 1x to 8x. 16x has no key.</td></tr>
   <tr><td>Scissors button</td><td>Starts the bbox capture.</td></tr>
   <tr><td>Camera button</td><td>Opens the camera picker. The numbers show how many cameras are shown, for example 3/5.</td></tr>
-  <tr><td>Menu button</td><td>Open Folder, Close Folder, Settings, Help.</td></tr>
+  <tr><td>Menu button</td><td>Open Folder, Close Folder, Settings (opens the settings dialog), Help.</td></tr>
 </table>
 <p>At 8x and 16x the app can show key frames only, so the picture changes in steps. The clock speed stays correct.</p>
 
@@ -115,13 +115,23 @@
 </ul>
 
 <h2>Settings</h2>
-<p>Open the menu button, then "Settings".</p>
+<ol>
+  <li>Open the menu button, then click "Settings…". The settings dialog opens.</li>
+  <li>Click an option. The change applies immediately.</li>
+  <li>Click Close or press <kbd>Esc</kbd> to close the dialog.</li>
+</ol>
 <table>
   <tr><th>Setting</th><th>Option</th><th>Result</th></tr>
   <tr><td>Video ratio</td><td>16:9</td><td>Each video is stretched to 16:9. This is the default.</td></tr>
   <tr><td>Video ratio</td><td>None</td><td>Each video keeps its own shape.</td></tr>
+  <tr><td>Decoder</td><td>Hardware</td><td>The video decoder of the GPU decodes the videos. This is the default. It uses less CPU power.</td></tr>
+  <tr><td>Decoder</td><td>Software</td><td>The CPU decodes the videos. Use it if the picture is not correct with the hardware decoder.</td></tr>
 </table>
-<p>The setting returns to the default when the app starts.</p>
+<ul>
+  <li>After a change of the decoder, the tiles are black for a moment. The clock time, the speed, and the shown cameras do not change.</li>
+  <li>If the computer has no hardware decoder that the app can use, the "Hardware" option is disabled.</li>
+  <li>The settings return to the defaults when the app starts.</li>
+</ul>
 
 </body>
 </html>

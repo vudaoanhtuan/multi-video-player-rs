@@ -98,7 +98,7 @@ The script makes `dist\Multi Video Player.exe`. The app is one executable of abo
 | Left / Right arrow | Jump 10 seconds back / forward |
 | C, or the camera button | Open the camera picker |
 | Cmd+O (Ctrl+O on Windows) | Open a folder |
-| Menu button (three dots) | "Open Folder…", "Close Folder", "Settings" (video ratio: "16:9" stretches each video to 16:9, "None" keeps the shape of the video), and "Help" (opens the user manual with all hotkeys in the web browser) |
+| Menu button (three dots) | "Open Folder…", "Close Folder", "Settings…" (opens the settings dialog. Video ratio: "16:9" stretches each video to 16:9, "None" keeps the shape of the video. Decoder: "Hardware" or "Software"), and "Help" (opens the user manual with all hotkeys in the web browser) |
 | G | Open the "go to time" dialog. Type or paste `HH:mm:ss` or `HHmmss` |
 | Shift+G | Jump to the time in the clipboard, if the clipboard text is `HH:mm:ss` or `HHmmss` |
 | T, or a click on the timer | Pause and copy the clock time |
@@ -128,7 +128,7 @@ The script makes `dist\Multi Video Player.exe`. The app is one executable of abo
 
 ### Performance
 
-- Hardware decode through VideoToolbox (macOS) or Direct3D 11 (Windows). If it fails for a stream, that stream uses software decode with 4 threads.
+- Hardware decode through VideoToolbox (macOS) or Direct3D 11 (Windows). If it fails for a stream, that stream uses software decode with 4 threads. The "Decoder" setting changes between hardware decode and software decode while the app runs.
 - Zero copy on macOS: the decoder output (`CVPixelBuffer`, backed by an IOSurface) becomes a Metal texture with no pixel copy. A shader converts YUV to RGB.
 - Zero copy on Windows: the decode thread copies each picture on the GPU from the decoder (Direct3D 11) to a shared texture (NV12 or P010). The renderer (Direct3D 12) opens the same texture, and the shader reads its two planes directly. The pixels do not go through normal memory.
 - The window is drawn only when necessary: when a new video frame is due (not more than about 70 times each second), 4 times each second for the timer, and on input. A paused app uses no CPU.
@@ -192,7 +192,7 @@ The app icon is one SVG file: `assets/app-icon/app-icon.svg`. To change the icon
 
 ## Development tools
 
-- `MULTI_VIDEO_PLAYER_DECODE=software` or `MULTI_VIDEO_PLAYER_DECODE=copy` turns off hardware decode or zero copy. Use it to compare the decode paths.
+- `MULTI_VIDEO_PLAYER_DECODE=software` starts the app with the "Decoder" setting at "Software". `MULTI_VIDEO_PLAYER_DECODE=copy` turns off zero copy. Use them to compare the decode paths.
 - `RUST_LOG=info` prints the decode setup. `RUST_LOG=debug` also shows FFmpeg warnings.
 - `cargo build --release --features selftest` adds a script tool that sends keys and clicks to the real window, saves window pictures, and prints the frame time of each tile. See `src/ui/selftest.rs`.
 

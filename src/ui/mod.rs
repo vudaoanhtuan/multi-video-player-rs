@@ -24,7 +24,7 @@ use egui::{Color32, Key, Modifiers, RichText};
 use crate::clock::SPEEDS;
 use crate::library::{scan_folder, ScanResult};
 use crate::media::ffmpeg::FfmpegProbe;
-use crate::media::DecodeOptions;
+use crate::media::{DecodeOptions, HwDecode};
 use crate::platform::{self, AppMenu, MenuCommand};
 use crate::playback::Waker;
 use crate::render::VideoRenderer;
@@ -79,7 +79,8 @@ struct Notice {
 
 pub struct App {
     renderer: VideoRenderer,
-    decode: DecodeOptions,
+    /// The hardware decode of this computer. `None`: the app can decode on the CPU only.
+    hw_decode: Option<HwDecode>,
     waker: Waker,
     commands: Receiver<MenuCommand>,
     has_native_menu: bool,
@@ -91,6 +92,8 @@ pub struct App {
     title: String,
     notice: Option<Notice>,
     settings: settings::Settings,
+    /// The settings dialog is open. It does not belong to a session: it also works with no folder open.
+    settings_open: bool,
     clipboard: clipboard::Clipboard,
     /// Shift+G asked for the clipboard text. A valid time in it starts a jump.
     clipboard_jump: bool,
@@ -108,21 +111,26 @@ impl App {
 
         let render_state = cc.wgpu_render_state.as_ref().ok_or("the wgpu renderer is not available")?;
         let support = platform::video_support(&render_state.device);
-        let mut decode = DecodeOptions { hw: support.hw_decode };
+        let mut hw_decode = support.hw_decode;
         let mut importer = support.importer;
+        let mut settings = settings::Settings::default();
         // For tests and problem reports: MULTI_VIDEO_PLAYER_DECODE=software | copy
         match std::env::var("MULTI_VIDEO_PLAYER_DECODE").as_deref() {
-            Ok("software") => decode.hw = None,
+            // The start value of the "Decoder" setting. The user can change it in the settings dialog.
+            Ok("software") => settings.decoder = settings::Decoder::Software,
             Ok("copy") => {
                 importer = None;
-                if let Some(hw) = decode.hw.as_mut() {
+                if let Some(hw) = hw_decode.as_mut() {
                     hw.zero_copy_nv12 = false;
                     hw.zero_copy_p010 = false;
                 }
             }
             _ => {}
         }
-        log::info!("decode: {decode:?}, zero copy: {}", importer.is_some());
+        if hw_decode.is_none() {
+            settings.decoder = settings::Decoder::Software;
+        }
+        log::info!("hardware decode: {hw_decode:?}, zero copy: {}, decoder: {}", importer.is_some(), settings.decoder.label());
         let renderer = VideoRenderer::new(render_state, importer);
 
         let (sender, commands) = mpsc::channel();
@@ -137,7 +145,7 @@ impl App {
 
         let mut app = Self {
             renderer,
-            decode,
+            hw_decode,
             waker,
             commands,
             has_native_menu: menu.is_some(),
@@ -146,7 +154,8 @@ impl App {
             folder: None,
             title: window_title(None),
             notice: None,
-            settings: settings::Settings::default(),
+            settings,
+            settings_open: false,
             clipboard: clipboard::Clipboard::default(),
             clipboard_jump: false,
             last_refresh: Instant::now(),
@@ -157,6 +166,37 @@ impl App {
             app.open_folder(folder, &ctx);
         }
         Ok(app)
+    }
+
+    /// The decode options for the "Decoder" setting.
+    fn decode_options(&self) -> DecodeOptions {
+        match self.settings.decoder {
+            settings::Decoder::Hardware => DecodeOptions { hw: self.hw_decode },
+            settings::Decoder::Software => DecodeOptions { hw: None },
+        }
+    }
+
+    /// Shows the settings dialog when it is open, and applies a change.
+    fn show_settings(&mut self, ctx: &egui::Context) {
+        if !self.settings_open {
+            return;
+        }
+        let before = self.settings;
+        if settings::show_dialog(ctx, &mut self.settings, self.hw_decode.is_some()) {
+            self.settings_open = false;
+        }
+        if self.settings == before {
+            return;
+        }
+        if self.settings.decoder != before.decoder {
+            log::info!("decoder: {}", self.settings.decoder.label());
+            let opts = self.decode_options();
+            if let State::Ready(session) = &mut self.state {
+                session.set_decode(opts, &self.renderer);
+            }
+        }
+        // The grid of this refresh was drawn with the old settings.
+        ctx.request_repaint();
     }
 
     /// Stops playback, drops the old library, and scans the folder in the background.
@@ -231,6 +271,7 @@ impl App {
             Err(mpsc::TryRecvError::Empty) => return,
             Err(mpsc::TryRecvError::Disconnected) => Err("The folder scan stopped.".to_owned()),
         };
+        let opts = self.decode_options();
         self.state = match scan {
             Err(message) => State::Failed(message),
             Ok(scan) => {
@@ -244,7 +285,7 @@ impl App {
                 match scan.library {
                     Some(library) => State::Ready(Box::new(Session::new(
                         library,
-                        self.decode,
+                        opts,
                         self.waker.clone(),
                         &self.renderer,
                     ))),
@@ -272,7 +313,8 @@ impl App {
             }
         }
 
-        if session.goto.is_some() || session.picker.is_some() || session.bbox.is_dialog() || ctx.text_edit_focused() {
+        let dialog = self.settings_open || session.goto.is_some() || session.picker.is_some() || session.bbox.is_dialog();
+        if dialog || ctx.text_edit_focused() {
             return;
         }
         let pressed = |modifiers, key| ctx.input_mut(|i| i.consume_key(modifiers, key));
@@ -390,7 +432,10 @@ impl App {
                 selftest::Action::Stats => {
                     match &self.state {
                         State::Ready(_) => {}
-                        State::NoFolder => println!("stats state=no-folder title={:?}", self.title),
+                        State::NoFolder => {
+                            let settings = if self.settings_open { "open" } else { "closed" };
+                            println!("stats state=no-folder title={:?} | settings={settings}", self.title);
+                        }
                         State::Loading { .. } => println!("stats state=loading"),
                         State::NoVideos => println!("stats state=no-videos"),
                         State::Failed(_) => println!("stats state=failed"),
@@ -399,15 +444,22 @@ impl App {
                         let clock = session.clock.snapshot();
                         let ms = |t: crate::time::Timestamp| format!("{}.{:03}", t.format_hms(), t.time_of_day() / 1000 % 1000);
                         let mut line = format!("stats clock={} playing={} speed={}", ms(clock.time), clock.playing, clock.speed);
-                        line += &format!(" ratio={} title={:?}", self.settings.video_ratio.label(), self.title);
+                        line += &format!(" ratio={} decoder={}", self.settings.video_ratio.label(), self.settings.decoder.label());
+                        line += &format!(" title={:?}", self.title);
                         for tile in &session.tiles {
                             let id = &session.library.cameras[tile.camera].camera_id;
                             match tile.player.frame_time() {
-                                Some(t) => line += &format!(" | {id}={} lag={}ms", ms(t), (clock.time.0 - t.0) / 1000),
+                                Some(t) => {
+                                    // "hw": the frame is in the memory of the hardware decoder.
+                                    let hw = tile.player.frame().is_some_and(|f| matches!(f.data, crate::media::FrameData::Hw(_)));
+                                    let memory = if hw { "hw" } else { "cpu" };
+                                    line += &format!(" | {id}={} lag={}ms frame={memory}", ms(t), (clock.time.0 - t.0) / 1000);
+                                }
                                 None => line += &format!(" | {id}=black"),
                             }
                         }
                         line += &format!(" | goto={}", if session.goto.is_some() { "open" } else { "closed" });
+                        line += &format!(" | settings={}", if self.settings_open { "open" } else { "closed" });
                         line += &match &session.bbox {
                             bbox::BboxMode::Off => " | bbox=off".to_owned(),
                             bbox::BboxMode::PickCamera => " | bbox=pick".to_owned(),
@@ -503,13 +555,13 @@ impl eframe::App for App {
                 State::Ready(session) => Some(&mut **session),
                 _ => None,
             };
-            bar_action = controls::show(ui, session, clock.as_ref(), can_close, &self.settings);
+            bar_action = controls::show(ui, session, clock.as_ref(), can_close);
         });
         self.handle_copy_request(&ctx);
         match bar_action {
             Some(controls::BarAction::OpenFolder) => want_open = true,
             Some(controls::BarAction::CloseFolder) => self.close_folder(),
-            Some(controls::BarAction::SetVideoRatio(ratio)) => self.settings.video_ratio = ratio,
+            Some(controls::BarAction::OpenSettings) => self.settings_open = true,
             Some(controls::BarAction::ShowHelp) => self.show_help(),
             None => {}
         }
@@ -552,6 +604,7 @@ impl eframe::App for App {
             goto::show(&ctx, session);
             bbox::show_dialog(&ctx, session);
         }
+        self.show_settings(&ctx);
         // Requests from the dialogs and from a click on a tile.
         self.handle_copy_request(&ctx);
 

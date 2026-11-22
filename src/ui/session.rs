@@ -115,6 +115,16 @@ impl Session {
         self.shown = shown;
     }
 
+    /// Changes the decoder. Each shown camera opens its files again with the
+    /// new decoder and joins at the current clock time. A tile is black until
+    /// its frame is ready.
+    pub fn set_decode(&mut self, opts: DecodeOptions, renderer: &VideoRenderer) {
+        self.opts = opts;
+        // Dropping a tile stops its decode thread.
+        self.tiles.clear();
+        self.set_shown(self.shown.clone(), renderer);
+    }
+
     pub fn shown_count(&self) -> usize {
         self.shown.iter().filter(|on| **on).count()
     }

@@ -6,7 +6,6 @@ use std::sync::OnceLock;
 use egui::{Align, Color32, FontId, Layout, Rect, RichText, Sense, Stroke, StrokeKind, Ui};
 
 use super::session::Session;
-use super::settings::{Settings, VideoRatio};
 use crate::clock::{Snapshot, SPEEDS};
 use crate::time::Timestamp;
 
@@ -56,7 +55,7 @@ pub fn speed_label(speed: f64) -> String {
 pub enum BarAction {
     OpenFolder,
     CloseFolder,
-    SetVideoRatio(VideoRatio),
+    OpenSettings,
     ShowHelp,
 }
 
@@ -68,7 +67,6 @@ pub fn show(
     mut session: Option<&mut Session>,
     clock: Option<&Snapshot>,
     can_close: bool,
-    settings: &Settings,
 ) -> Option<BarAction> {
     ui.set_height(BAR_HEIGHT);
     let enabled = session.is_some();
@@ -93,7 +91,7 @@ pub fn show(
         // The items on the right are laid out first, from the right end. The
         // progress bar then takes all the width that is left.
         ui.with_layout(Layout::right_to_left(Align::Center), |ui| {
-            action = more_menu(ui, can_close, settings);
+            action = more_menu(ui, can_close);
 
             ui.add_enabled_ui(enabled, |ui| {
                 // Cameras: a camera icon and the count of shown cameras.
@@ -129,7 +127,7 @@ pub fn show(
 }
 
 /// The menu button at the right end of the control bar: three vertical dots.
-fn more_menu(ui: &mut Ui, can_close: bool, settings: &Settings) -> Option<BarAction> {
+fn more_menu(ui: &mut Ui, can_close: bool) -> Option<BarAction> {
     let button = icon_button(ui, &MORE_ICON, None, false);
     let mut action = None;
     egui::Popup::menu(&button).show(|ui| {
@@ -143,16 +141,10 @@ fn more_menu(ui: &mut Ui, can_close: bool, settings: &Settings) -> Option<BarAct
             ui.close();
         }
         ui.separator();
-        ui.menu_button("Settings", |ui| {
-            ui.set_min_width(130.0);
-            ui.label(RichText::new("Video ratio").weak());
-            for ratio in VideoRatio::ALL {
-                if ui.radio(settings.video_ratio == ratio, ratio.label()).clicked() {
-                    action = Some(BarAction::SetVideoRatio(ratio));
-                    ui.close();
-                }
-            }
-        });
+        if ui.button("Settings…").clicked() {
+            action = Some(BarAction::OpenSettings);
+            ui.close();
+        }
         if ui.button("Help").clicked() {
             action = Some(BarAction::ShowHelp);
             ui.close();

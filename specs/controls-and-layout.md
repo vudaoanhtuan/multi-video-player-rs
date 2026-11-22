@@ -56,7 +56,7 @@ The control bar is one row at the bottom of the window. From left to right:
 | Speed menu | Sets the playback speed. |
 | Bbox button | A button with a scissors icon. Starts the bbox capture. See [bbox-capture.md](bbox-capture.md). |
 | Cameras button | A button with a camera icon and the count of shown cameras. Opens the camera picker dialog. |
-| Menu button | A button with three vertical dots, at the right end. Opens a menu with "Open Folder…", "Close Folder", "Settings", and "Help". |
+| Menu button | A button with three vertical dots, at the right end. Opens a menu with "Open Folder…", "Close Folder", "Settings…", and "Help". |
 
 ## Play and pause
 
@@ -139,12 +139,32 @@ The control bar is one row at the bottom of the window. From left to right:
 
 ## Settings
 
-- The menu of the menu button has a "Settings" entry that opens a second menu.
-- "Video ratio" has two options. Exactly one is selected: "None" and "16:9".
-- The default is "16:9" at each start of the app.
+- The menu of the menu button has a "Settings…" entry. It opens the settings dialog. The dialog appears on top of the grid.
+- The settings dialog is available in each state, also with no folder open.
+- The dialog shows two settings: "Video ratio" and "Decoder". Each setting has a group of options. Exactly one option of a group is selected.
+- A click on an option applies the change immediately. The dialog stays open.
+- The dialog has a "Close" button. The Escape key and a click outside the dialog do the same.
+- Playback continues while the dialog is open. The hotkeys do nothing while the dialog is open.
+- Each setting has its default at each start of the app.
+- The settings stay when the user closes a folder or opens a different folder.
+
+### Video ratio
+
+- "Video ratio" has two options: "None" and "16:9".
+- The default is "16:9".
 - A change applies immediately to all tiles, in play or in pause.
 - The setting does not change the decode, the clock, or the frame that a tile shows. The stretch is done when the frame is drawn.
-- The setting stays when the user closes a folder or opens a different folder.
+
+### Decoder
+
+- "Decoder" has two options: "Hardware" and "Software".
+  - "Hardware": the video decoder of the GPU decodes the videos. If it cannot decode a video, the CPU decodes that video.
+  - "Software": the CPU decodes all videos.
+- The default is "Hardware".
+- If the computer has no hardware decoder that the app can use, "Software" is selected and "Hardware" is disabled.
+- A change applies immediately to all shown cameras, in play or in pause. Each shown camera opens its files again with the new decoder and joins at the clock time. A tile is black until its frame is ready.
+- A change does not change the clock, the play state, the speed, or the camera choice.
+- A camera that the user shows later, and a folder that the user opens later, use the selected decoder.
 
 ## Help
 
@@ -188,6 +208,9 @@ The control bar is one row at the bottom of the window. From left to right:
 - The 3 key sets the speed to 3x, in play and in pause. The speed menu then shows 3x.
 - A digit key typed in the "go to time" dialog does not change the speed.
 - With the default setting, a 4:3 video fills a 16:9 area in its tile. With "None", the same video is shown as 4:3.
+- "Settings…" in the menu opens the settings dialog, with and without an open folder. "16:9" and "Hardware" are selected after the app starts.
+- A click on "Software" in the settings dialog while playing keeps the dialog open. The clock continues, and all tiles show frames again after a moment.
+- The Escape key closes the settings dialog. The space key does not change the play state while the dialog is open.
 - "Help" in the menu opens the manual in the web browser, with and without an open folder. The manual lists each hotkey of the app.
 - The window title shows the app name, the version, and the path of the open folder. After "Close Folder", it shows the name and the version only.
 - "Close Folder" in the menu while playing shows the "open a folder" message and disables the control bar. The menu button still works.
