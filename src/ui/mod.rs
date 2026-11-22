@@ -21,7 +21,6 @@ use std::time::{Duration, Instant};
 
 use egui::{Color32, Key, Modifiers, RichText};
 
-use crate::clock::SPEEDS;
 use crate::library::{scan_folder, ScanResult};
 use crate::media::ffmpeg::FfmpegProbe;
 use crate::media::{DecodeOptions, HwDecode};
@@ -48,10 +47,48 @@ const MESSAGE_NOTICE_TIME: Duration = Duration::from_secs(4);
 /// The dot between the parts of the window title.
 const TITLE_SEPARATOR: &str = " \u{b7} ";
 
-/// The hotkeys of the first 8 speeds in `SPEEDS`, in the same order: the key 1
-/// sets 1x, the key 8 sets 8x. 16x has no hotkey.
-const SPEED_KEYS: [Key; 8] =
-    [Key::Num1, Key::Num2, Key::Num3, Key::Num4, Key::Num5, Key::Num6, Key::Num7, Key::Num8];
+/// The digit of a digit key. `None` for all other keys.
+fn key_digit(key: Key) -> Option<u32> {
+    const DIGIT_KEYS: [Key; 10] =
+        [Key::Num0, Key::Num1, Key::Num2, Key::Num3, Key::Num4, Key::Num5, Key::Num6, Key::Num7, Key::Num8, Key::Num9];
+    DIGIT_KEYS.iter().position(|digit_key| *digit_key == key).map(|digit| digit as u32)
+}
+
+/// The speed of a speed hotkey, from the digit of its key.
+///
+/// | Keys | Speed | Speed with Shift |
+/// |---|---|---|
+/// | 1 to 9 | 1x to 9x | 11x to 19x |
+/// | 0 | 10x | 20x |
+fn key_speed(digit: u32, shift: bool) -> f64 {
+    let speed = if digit == 0 { 10 } else { digit };
+    f64::from(if shift { speed + 10 } else { speed })
+}
+
+/// Takes the presses of the speed hotkeys out of the input. Returns their speeds.
+fn take_key_speeds(ctx: &egui::Context) -> Vec<f64> {
+    let mut speeds = Vec::new();
+    ctx.input_mut(|input| {
+        input.events.retain(|event| {
+            let egui::Event::Key { key, physical_key, pressed: true, modifiers, .. } = event else { return true };
+            // A speed hotkey has no modifier, or Shift only.
+            if modifiers.ctrl || modifiers.alt || modifiers.command || modifiers.mac_cmd {
+                return true;
+            }
+            // With Shift, a digit key gives the character that it makes with
+            // Shift, for example "!" for the key 1. The physical key is
+            // always the digit key.
+            match physical_key.and_then(key_digit).or_else(|| key_digit(*key)) {
+                Some(digit) => {
+                    speeds.push(key_speed(digit, modifiers.shift));
+                    false
+                }
+                None => true,
+            }
+        });
+    });
+    speeds
+}
 
 /// The jump of a jump hotkey: negative for back, positive for forward.
 /// `None` for all other keys.
@@ -162,6 +199,9 @@ impl App {
         ctx.set_theme(egui::Theme::Dark);
         // The loader that draws the SVG icons of the control bar.
         egui_extras::install_image_loaders(&ctx);
+        // egui gives a popup this height at most. The default is 400 points,
+        // which is too low for the 20 rows of the speed menu.
+        ctx.all_styles_mut(|style| style.spacing.default_area_size.y = 600.0);
 
         let render_state = cc.wgpu_render_state.as_ref().ok_or("the wgpu renderer is not available")?;
         let support = platform::video_support(&render_state.device);
@@ -397,11 +437,8 @@ impl App {
         if pressed(Modifiers::NONE, Key::F) {
             session.toggle_bbox();
         }
-        // `zip` stops after the last key, so 16x gets no key.
-        for (key, speed) in SPEED_KEYS.into_iter().zip(SPEEDS) {
-            if pressed(Modifiers::NONE, key) {
-                session.set_speed(speed);
-            }
+        for speed in take_key_speeds(ctx) {
+            session.set_speed(speed);
         }
         if session.bbox.is_picking() && pressed(Modifiers::NONE, Key::Escape) {
             session.toggle_bbox();
@@ -723,6 +760,47 @@ mod tests {
         for key in [Key::Space, Key::G, Key::Num1, Key::ArrowUp, Key::ArrowDown, Key::Slash] {
             assert_eq!(key_jump(key, false), None, "{key:?}");
         }
+    }
+
+    #[test]
+    fn speed_hotkeys_have_the_speeds_of_the_spec() {
+        let digit = |key| key_digit(key).unwrap();
+        assert_eq!(key_speed(digit(Key::Num1), false), 1.0);
+        assert_eq!(key_speed(digit(Key::Num9), false), 9.0);
+        assert_eq!(key_speed(digit(Key::Num0), false), 10.0);
+        assert_eq!(key_speed(digit(Key::Num1), true), 11.0);
+        assert_eq!(key_speed(digit(Key::Num9), true), 19.0);
+        assert_eq!(key_speed(digit(Key::Num0), true), 20.0);
+        for key in [Key::Space, Key::G, Key::Exclamationmark, Key::Comma] {
+            assert_eq!(key_digit(key), None, "{key:?}");
+        }
+        // Each speed of the speed menu has one hotkey, and each hotkey sets a speed of the menu.
+        let mut speeds: Vec<f64> = (0..10).flat_map(|digit| [key_speed(digit, false), key_speed(digit, true)]).collect();
+        speeds.sort_by(f64::total_cmp);
+        assert_eq!(speeds, crate::clock::SPEEDS);
+    }
+
+    #[test]
+    fn speed_hotkeys_are_taken_from_the_input() {
+        let press = |key, physical_key, modifiers| egui::Event::Key { key, physical_key, pressed: true, repeat: false, modifiers };
+        let events = vec![
+            press(Key::Num3, Some(Key::Num3), Modifiers::NONE),
+            // A real keyboard gives "!" for Shift+1, and no character key for Shift+2.
+            press(Key::Exclamationmark, Some(Key::Num1), Modifiers::SHIFT),
+            press(Key::Num2, Some(Key::Num2), Modifiers::SHIFT),
+            // A test script gives no physical key.
+            press(Key::Num0, None, Modifiers::SHIFT),
+            // Not speed hotkeys: these stay in the input.
+            press(Key::Num4, Some(Key::Num4), Modifiers::COMMAND),
+            press(Key::G, Some(Key::G), Modifiers::NONE),
+        ];
+        let ctx = egui::Context::default();
+        ctx.begin_pass(egui::RawInput { events, ..Default::default() });
+        assert_eq!(take_key_speeds(&ctx), [3.0, 11.0, 12.0, 20.0]);
+        assert_eq!(ctx.input(|input| input.events.len()), 2);
+        assert_eq!(take_key_speeds(&ctx), [0.0; 0]);
+        // egui does not permit a drop of texture changes that were not applied.
+        ctx.end_pass().textures_delta.clear();
     }
 
     #[test]

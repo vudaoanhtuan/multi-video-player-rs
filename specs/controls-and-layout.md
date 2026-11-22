@@ -120,9 +120,18 @@ The control bar is one row at the bottom of the window. From left to right:
 
 ## Playback speed
 
-- A menu with these speeds: 1x, 2x, 3x, 4x, 5x, 6x, 7x, 8x, 16x.
-- The digit keys 1 to 8 set the speed: the key 1 sets 1x, the key 2 sets 2x, and so on to the key 8 for 8x. The menu shows the new speed.
-- 16x has no key. Only the menu sets it.
+- A menu with all whole speeds from 1x to 20x: 1x, 2x, 3x, and so on to 20x.
+- The open menu shows all speeds if the window is high enough. In a low window, the menu scrolls.
+- The digit keys set the speed. The menu shows the new speed.
+
+| Keys | Speed |
+|---|---|
+| 1 to 9 | 1x to 9x: the key 1 sets 1x, the key 2 sets 2x, and so on |
+| 0 | 10x |
+| Shift + 1 to 9 | 11x to 19x: Shift + 1 sets 11x, Shift + 2 sets 12x, and so on |
+| Shift + 0 | 20x |
+
+- The digit keys are the keys of a US keyboard.
 - The default is 1x after each folder open.
 - A speed change applies immediately, in play or in pause.
 
@@ -197,12 +206,11 @@ The control bar is one row at the bottom of the window. From left to right:
 
 ### Key frames only from
 
-- "Key frames only from" is a number box. Its value is a whole number from 2 to 16. The box shows the value with an "x", for example "8x".
+- "Key frames only from" is a number box. Its value is a whole number from 2 to 20. The box shows the value with an "x", for example "8x".
 - The default is 8.
 - To change the value, the user clicks the box and types a number. A drag on the box to the left or to the right also changes the value.
 - The Enter key in the box does the same as Apply, with the typed number.
-- A typed number below 2 becomes 2. A typed number above 16 becomes 16. Text that is not a number does not change the value.
-- The value does not have to be a speed of the speed menu. Example: with the value 10, only 16x shows key frames only.
+- A typed number below 2 becomes 2. A typed number above 20 becomes 20. Text that is not a number does not change the value.
 - At the speed of the value and at each higher speed, a camera shows key frames only, if its video has key frames often enough. See "Speed" in [synced-playback.md](synced-playback.md).
 - Below that speed, a camera shows all frames, unless it is late.
 - After Apply, a change applies immediately to all shown cameras, in play or in pause. The decode does not start again, and the tiles do not go black.
@@ -248,15 +256,16 @@ The control bar is one row at the bottom of the window. From left to right:
 - Shift + G with `21:45:10` in the clipboard sets the clock to 21:45:10. With other text in the clipboard, the clock does not change.
 - A paste of `21:45` in the "go to time" dialog does nothing. The typed text `21:45` and Enter sets the clock to 21:45:00.
 - A click on the timer while playing pauses playback and puts the clock time in the clipboard. The T key does the same.
-- The speed menu shows 1x, 2x, 3x, 4x, 5x, 6x, 7x, 8x, 16x.
+- The speed menu shows the 20 speeds from 1x to 20x.
 - The 3 key sets the speed to 3x, in play and in pause. The speed menu then shows 3x.
+- The 0 key sets 10x. Shift + 3 sets 13x. Shift + 0 sets 20x.
 - A digit key typed in the "go to time" dialog does not change the speed.
 - With the default setting, a 4:3 video fills a 16:9 area in its tile. With "None", the same video is shown as 4:3.
 - "Settings…" in the menu opens the settings dialog, with and without an open folder. "16:9" and "Hardware" are selected after the app starts.
 - A click on "Software" in the settings dialog while playing does not change the decode. A click on Apply then closes the dialog. The clock continues, and all tiles show frames again after a moment.
 - After the app starts, the tiles show no camera id label. A click on "Show" for "Camera name" and then on Apply shows the camera id in the top left corner of each tile.
 - A click on "None" and then on Cancel leaves the video ratio at "16:9". The dialog shows "16:9" when it opens again.
-- A click on the "Key frames only from" box, the text `4`, and Enter closes the dialog and sets the value to 4. The text `40` and Apply sets the value to 16.
+- A click on the "Key frames only from" box, the text `4`, and Enter closes the dialog and sets the value to 4. The text `40` and Apply sets the value to 20.
 - With "Key frames only from" at 4 and a speed of 4x, a video with one key frame each second changes its picture 4 times each real second. With the default of 8, the same video at 4x shows the frames between the key frames.
 - The Escape key closes the settings dialog with no change. The space key does not change the play state while the dialog is open.
 - "Help" in the menu opens the manual in the web browser, with and without an open folder. The manual lists each hotkey of the app.

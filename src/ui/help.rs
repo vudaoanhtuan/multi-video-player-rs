@@ -45,7 +45,7 @@ mod tests {
     #[test]
     fn manual_lists_every_hotkey() {
         // Keep this list equal to the keys in `App::handle_keys` and in the dialogs.
-        for key in ["Space", "Left", "Right", ",", ".", ";", "'", "[", "]", "G", "Shift", "T", "C", "F", "1", "8", "Enter", "Esc", "Cmd", "Ctrl", "O"] {
+        for key in ["Space", "Left", "Right", ",", ".", ";", "'", "[", "]", "G", "Shift", "T", "C", "F", "1", "9", "0", "Enter", "Esc", "Cmd", "Ctrl", "O"] {
             assert!(MANUAL_HTML.contains(&format!("<kbd>{key}</kbd>")), "hotkey {key} is not in the manual");
         }
     }

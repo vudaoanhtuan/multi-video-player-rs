@@ -80,8 +80,8 @@ impl Default for Settings {
 }
 
 /// The permitted values of the "Key frames only from" setting. At 1x a
-/// camera always shows all frames, and 16x is the highest speed of the app.
-pub const KEY_ONLY_MIN_SPEED_RANGE: RangeInclusive<u32> = 2..=16;
+/// camera always shows all frames, and 20x is the highest speed of the app.
+pub const KEY_ONLY_MIN_SPEED_RANGE: RangeInclusive<u32> = 2..=20;
 
 /// How the user closed the settings dialog.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

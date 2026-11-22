@@ -210,8 +210,12 @@ fn speed_menu(ui: &mut Ui, session: Option<&Session>, clock: Option<&Snapshot>) 
         // The box has the height of the buttons. egui gives a combo box the
         // smallest height of an interactive item.
         ui.spacing_mut().interact_size.y = BUTTON_HEIGHT;
+        // The open menu shows all speeds if the window is high enough. In a
+        // low window, the menu scrolls.
+        let menu_height = (ui.max_rect().top() - 24.0).max(100.0);
         egui::ComboBox::from_id_salt("speed-menu")
             .width(64.0)
+            .height(menu_height)
             .selected_text(speed_label(current))
             .show_ui(ui, |ui| {
                 for speed in SPEEDS {
@@ -223,7 +227,7 @@ fn speed_menu(ui: &mut Ui, session: Option<&Session>, clock: Option<&Snapshot>) 
                 }
             })
             .response
-            .on_hover_text("Playback speed (1 to 8 for 1x to 8x)");
+            .on_hover_text("Playback speed (1 to 9 for 1x to 9x, 0 for 10x, with Shift for 11x to 20x)");
     });
 }
 

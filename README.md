@@ -105,7 +105,7 @@ The script makes `dist\Multi Video Player.exe`. The app is one executable of abo
 | G | Open the "go to time" dialog. Type or paste `HH:mm:ss` or `HHmmss` |
 | Shift+G | Jump to the time in the clipboard, if the clipboard text is `HH:mm:ss` or `HHmmss` |
 | T, or a click on the timer | Pause and copy the clock time |
-| 1 to 8, or the speed menu | Set the playback speed: 1x to 8x. The speed menu also has 16x |
+| 1 to 9, 0, or the speed menu | Set the playback speed: 1 to 9 for 1x to 9x, 0 for 10x. With Shift: 11x to 19x, and 20x for Shift+0. The speed menu has all speeds from 1x to 20x |
 | F, or the bbox button (photo camera icon) | Bbox capture: pause, click a camera, then draw a rectangle on its frame. The area is copied as a picture |
 | Click or drag on the progress bar | Jump |
 
