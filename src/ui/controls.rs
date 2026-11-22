@@ -227,7 +227,7 @@ fn speed_menu(ui: &mut Ui, session: Option<&Session>, clock: Option<&Snapshot>) 
             }
         })
         .response
-        .on_hover_text("Playback speed");
+        .on_hover_text("Playback speed (1 to 8 for 1x to 8x)");
 }
 
 /// The progress bar. A click jumps, a drag jumps continuously, and the

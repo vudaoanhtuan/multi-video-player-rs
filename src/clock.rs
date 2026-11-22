@@ -8,8 +8,9 @@ use std::time::Instant;
 
 use crate::time::Timestamp;
 
-/// Playback speeds offered by the speed menu.
-pub const SPEEDS: [f64; 5] = [1.0, 2.0, 4.0, 8.0, 16.0];
+/// Playback speeds offered by the speed menu. The digit keys 1 to 8 set the
+/// first 8 speeds in this order. 16x has no hotkey.
+pub const SPEEDS: [f64; 9] = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 16.0];
 pub const DEFAULT_SPEED: f64 = 1.0;
 
 /// The clock state at one moment.

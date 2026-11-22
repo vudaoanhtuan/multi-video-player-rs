@@ -105,7 +105,9 @@ The control bar is one row at the bottom of the window. From left to right:
 
 ## Playback speed
 
-- A menu with these speeds: 1x, 2x, 4x, 8x, 16x.
+- A menu with these speeds: 1x, 2x, 3x, 4x, 5x, 6x, 7x, 8x, 16x.
+- The digit keys 1 to 8 set the speed: the key 1 sets 1x, the key 2 sets 2x, and so on to the key 8 for 8x. The menu shows the new speed.
+- 16x has no key. Only the menu sets it.
 - The default is 1x after each folder open.
 - A speed change applies immediately, in play or in pause.
 
@@ -182,7 +184,9 @@ The control bar is one row at the bottom of the window. From left to right:
 - Shift + G with `21:45:10` in the clipboard sets the clock to 21:45:10. With other text in the clipboard, the clock does not change.
 - A paste of `21:45` in the "go to time" dialog does nothing. The typed text `21:45` and Enter sets the clock to 21:45:00.
 - A click on the timer while playing pauses playback and puts the clock time in the clipboard. The T key does the same.
-- The speed menu shows 1x, 2x, 4x, 8x, 16x.
+- The speed menu shows 1x, 2x, 3x, 4x, 5x, 6x, 7x, 8x, 16x.
+- The 3 key sets the speed to 3x, in play and in pause. The speed menu then shows 3x.
+- A digit key typed in the "go to time" dialog does not change the speed.
 - With the default setting, a 4:3 video fills a 16:9 area in its tile. With "None", the same video is shown as 4:3.
 - "Help" in the menu opens the manual in the web browser, with and without an open folder. The manual lists each hotkey of the app.
 - The window title shows the app name, the version, and the path of the open folder. After "Close Folder", it shows the name and the version only.

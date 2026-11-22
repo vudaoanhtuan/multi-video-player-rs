@@ -21,6 +21,7 @@ use std::time::{Duration, Instant};
 
 use egui::{Color32, Key, Modifiers, RichText};
 
+use crate::clock::SPEEDS;
 use crate::library::{scan_folder, ScanResult};
 use crate::media::ffmpeg::FfmpegProbe;
 use crate::media::DecodeOptions;
@@ -45,6 +46,11 @@ const MESSAGE_NOTICE_TIME: Duration = Duration::from_secs(4);
 
 /// The dot between the parts of the window title.
 const TITLE_SEPARATOR: &str = " \u{b7} ";
+
+/// The hotkeys of the first 8 speeds in `SPEEDS`, in the same order: the key 1
+/// sets 1x, the key 8 sets 8x. 16x has no hotkey.
+const SPEED_KEYS: [Key; 8] =
+    [Key::Num1, Key::Num2, Key::Num3, Key::Num4, Key::Num5, Key::Num6, Key::Num7, Key::Num8];
 
 /// The text of the window title: the app name, the version, and the folder
 /// that is open, with a dot between the parts.
@@ -287,6 +293,12 @@ impl App {
         }
         if pressed(Modifiers::NONE, Key::F) {
             session.toggle_bbox();
+        }
+        // `zip` stops after the last key, so 16x gets no key.
+        for (key, speed) in SPEED_KEYS.into_iter().zip(SPEEDS) {
+            if pressed(Modifiers::NONE, key) {
+                session.set_speed(speed);
+            }
         }
         if session.bbox.is_picking() && pressed(Modifiers::NONE, Key::Escape) {
             session.toggle_bbox();
