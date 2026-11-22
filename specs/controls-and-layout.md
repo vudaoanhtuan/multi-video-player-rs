@@ -101,7 +101,19 @@ The control bar is one row at the bottom of the window. From left to right:
 - A click on the bar jumps to that time.
 - A drag of the marker jumps continuously. Limit tile updates during the drag to about 10 each second.
 - When the pointer is over the bar, show the time at that position.
-- Left and right arrow keys jump 10 seconds back and forward.
+- Jump keys jump back and forward from the clock time. Each row has one key for back and one key for forward:
+
+| Keys (back / forward) | Jump | Jump with Shift |
+|---|---|---|
+| Left arrow / Right arrow | 2 seconds | 1 minute |
+| `,` / `.` | 5 seconds | 2 minutes |
+| `;` / `'` | 10 seconds | 5 minutes |
+| `[` / `]` | 30 seconds | 10 minutes |
+
+- A jump key works in play and in pause. The play state does not change.
+- A jump to a time before the start of the range goes to the start. A jump to a time after the end of the range goes to the end.
+- A key that the user holds down repeats the jump.
+- The keys are the keys of a US keyboard.
 
 ## Playback speed
 
@@ -205,7 +217,7 @@ The control bar is one row at the bottom of the window. From left to right:
 - One camera only: the tile fills the grid.
 - Many cameras (for example 16): tiles get small but stay readable. Do not add scroll bars to the grid.
 - No folder open: show an "open a folder" message with an open button in the grid area, and disable the control bar. The menu button stays enabled.
-- While a text box or a dialog has the keyboard focus, the space, C, G, T, F, and arrow keys do not control playback.
+- While a text box or a dialog has the keyboard focus, the space, C, G, T, F, digit, and jump keys do not control playback.
 
 ## Done when
 

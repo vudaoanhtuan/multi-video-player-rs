@@ -95,7 +95,10 @@ The script makes `dist\Multi Video Player.exe`. The app is one executable of abo
 | Input | Result |
 |---|---|
 | Space | Play or pause |
-| Left / Right arrow | Jump 10 seconds back / forward |
+| Left / Right arrow | Jump 2 seconds back / forward. With Shift: 1 minute |
+| `,` / `.` | Jump 5 seconds back / forward. With Shift: 2 minutes |
+| `;` / `'` | Jump 10 seconds back / forward. With Shift: 5 minutes |
+| `[` / `]` | Jump 30 seconds back / forward. With Shift: 10 minutes |
 | C, or the camera button | Open the camera picker |
 | Cmd+O (Ctrl+O on Windows) | Open a folder |
 | Menu button (three dots) | "Open Folder…", "Close Folder", "Settings…" (opens the settings dialog. Video ratio: "16:9" stretches each video to 16:9, "None" keeps the shape of the video. Decoder: "Hardware" or "Software". Key frames only from: the lowest speed that shows key frames only, default 8x), and "Help" (opens the user manual with all hotkeys in the web browser) |

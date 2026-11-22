@@ -29,7 +29,8 @@ use crate::platform::{self, AppMenu, MenuCommand};
 use crate::playback::Waker;
 use crate::render::VideoRenderer;
 use crate::time::parse_pasted_time_of_day;
-use session::{Session, ARROW_JUMP};
+use crate::time::{Micros, MICROS_PER_SEC};
+use session::Session;
 
 /// Refresh the timer at least this often while playing.
 const TIMER_REFRESH: Duration = Duration::from_millis(250);
@@ -51,6 +52,57 @@ const TITLE_SEPARATOR: &str = " \u{b7} ";
 /// sets 1x, the key 8 sets 8x. 16x has no hotkey.
 const SPEED_KEYS: [Key; 8] =
     [Key::Num1, Key::Num2, Key::Num3, Key::Num4, Key::Num5, Key::Num6, Key::Num7, Key::Num8];
+
+/// The jump of a jump hotkey: negative for back, positive for forward.
+/// `None` for all other keys.
+///
+/// | Keys (back / forward) | Jump | Jump with Shift |
+/// |---|---|---|
+/// | Left / Right arrow | 2 s | 1 min |
+/// | `,` / `.` | 5 s | 2 min |
+/// | `;` / `'` | 10 s | 5 min |
+/// | `[` / `]` | 30 s | 10 min |
+fn key_jump(key: Key, shift: bool) -> Option<Micros> {
+    const MIN: i64 = 60;
+    // Seconds with no Shift, seconds with Shift, and the direction.
+    let (plain, shifted, direction) = match key {
+        Key::ArrowLeft => (2, MIN, -1),
+        Key::ArrowRight => (2, MIN, 1),
+        Key::Comma => (5, 2 * MIN, -1),
+        Key::Period => (5, 2 * MIN, 1),
+        // With Shift, some systems give the character that the key makes
+        // with Shift (":", "{", "}") and not the key itself.
+        Key::Semicolon | Key::Colon => (10, 5 * MIN, -1),
+        Key::Quote => (10, 5 * MIN, 1),
+        Key::OpenBracket | Key::OpenCurlyBracket => (30, 10 * MIN, -1),
+        Key::CloseBracket | Key::CloseCurlyBracket => (30, 10 * MIN, 1),
+        _ => return None,
+    };
+    let seconds = if shift { shifted } else { plain };
+    Some(direction * seconds * MICROS_PER_SEC)
+}
+
+/// Takes the presses of the jump hotkeys out of the input. Returns their jumps.
+fn take_key_jumps(ctx: &egui::Context) -> Vec<Micros> {
+    let mut jumps = Vec::new();
+    ctx.input_mut(|input| {
+        input.events.retain(|event| {
+            let egui::Event::Key { key, pressed: true, modifiers, .. } = event else { return true };
+            // A jump hotkey has no modifier, or Shift only.
+            if modifiers.ctrl || modifiers.alt || modifiers.command || modifiers.mac_cmd {
+                return true;
+            }
+            match key_jump(*key, modifiers.shift) {
+                Some(jump) => {
+                    jumps.push(jump);
+                    false
+                }
+                None => true,
+            }
+        });
+    });
+    jumps
+}
 
 /// The text of the window title: the app name, the version, and the folder
 /// that is open, with a dot between the parts.
@@ -333,11 +385,8 @@ impl App {
         if pressed(Modifiers::NONE, Key::Space) {
             session.toggle_play();
         }
-        if pressed(Modifiers::NONE, Key::ArrowLeft) {
-            session.jump_by(-ARROW_JUMP);
-        }
-        if pressed(Modifiers::NONE, Key::ArrowRight) {
-            session.jump_by(ARROW_JUMP);
+        for jump in take_key_jumps(ctx) {
+            session.jump_by(jump);
         }
         if pressed(Modifiers::NONE, Key::C) {
             session.picker = Some(session.shown.clone());
@@ -649,6 +698,31 @@ impl eframe::App for App {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn jump_hotkeys_have_the_jumps_of_the_spec() {
+        const S: Micros = MICROS_PER_SEC;
+        // Back key, forward key, jump, jump with Shift.
+        let table = [
+            (Key::ArrowLeft, Key::ArrowRight, 2 * S, 60 * S),
+            (Key::Comma, Key::Period, 5 * S, 120 * S),
+            (Key::Semicolon, Key::Quote, 10 * S, 300 * S),
+            (Key::OpenBracket, Key::CloseBracket, 30 * S, 600 * S),
+        ];
+        for (back, forward, plain, shifted) in table {
+            assert_eq!(key_jump(back, false), Some(-plain), "{back:?}");
+            assert_eq!(key_jump(forward, false), Some(plain), "{forward:?}");
+            assert_eq!(key_jump(back, true), Some(-shifted), "Shift+{back:?}");
+            assert_eq!(key_jump(forward, true), Some(shifted), "Shift+{forward:?}");
+        }
+        // The characters that Shift makes from ";", "[", and "]".
+        assert_eq!(key_jump(Key::Colon, true), Some(-300 * S));
+        assert_eq!(key_jump(Key::OpenCurlyBracket, true), Some(-600 * S));
+        assert_eq!(key_jump(Key::CloseCurlyBracket, true), Some(600 * S));
+        for key in [Key::Space, Key::G, Key::Num1, Key::ArrowUp, Key::ArrowDown, Key::Slash] {
+            assert_eq!(key_jump(key, false), None, "{key:?}");
+        }
+    }
 
     #[test]
     fn window_title_has_name_version_and_folder() {

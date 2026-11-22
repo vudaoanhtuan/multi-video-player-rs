@@ -10,13 +10,10 @@ use crate::library::Library;
 use crate::media::DecodeOptions;
 use crate::playback::{CameraPlayer, Waker};
 use crate::render::{TileSurface, VideoRenderer};
-use crate::time::{resolve_time_of_day, Micros, Timestamp, MICROS_PER_SEC};
+use crate::time::{resolve_time_of_day, Micros, Timestamp};
 
 /// Time between tile updates during a drag on the progress bar: about 10 each second.
 const SCRUB_INTERVAL: Duration = Duration::from_millis(100);
-/// Jump of the left and right arrow keys.
-pub const ARROW_JUMP: i64 = 10 * MICROS_PER_SEC;
-
 /// One shown camera.
 pub struct Tile {
     /// Index into `Library::cameras`.

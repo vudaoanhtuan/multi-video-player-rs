@@ -42,7 +42,7 @@ Let the user copy a rectangle area of one camera frame to the clipboard as a pic
 - Positions and sizes are in pixels of this picture.
 - The rectangle is limited to the frame. A drag that ends outside the frame gives a rectangle that stops at the frame edge.
 - A rectangle smaller than 2 x 2 picture pixels is not a selection. Nothing is copied.
-- While the dialog is open, the other keys (space, arrows, C, G, T, F) do nothing.
+- While the dialog is open, the other keys (space, jump keys, digits, C, G, T, F) do nothing.
 
 ## Edge cases and errors
 
