@@ -1,0 +1,9 @@
+# The app links to the FFmpeg that scripts/build-ffmpeg.sh builds in the
+# folder ffmpeg-build/. It does not use an FFmpeg of the system.
+# Run ./scripts/build-ffmpeg.sh one time before the first cargo command.
+[env]
+# Where the FFmpeg headers and static libraries are. A value from the shell
+# replaces this one, so you can point to an FFmpeg that you built yourself.
+FFMPEG_DIR = { value = "ffmpeg-build/prefix", relative = true }
+# The oldest macOS that can run the app. scripts/build-ffmpeg.sh uses the same value.
+MACOSX_DEPLOYMENT_TARGET = "12.0"

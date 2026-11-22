@@ -5,19 +5,38 @@ The behavior is defined in [specs/](specs/README.md).
 
 ## Requirements
 
+- macOS with the Xcode command line tools (`xcode-select --install`). They give the C compiler, `make`, and `git`.
 - Rust 1.95 or later.
-- FFmpeg shared libraries and `pkg-config`. On macOS: `brew install ffmpeg pkg-config`. Tested with FFmpeg 7.1.
-- macOS. Other systems use the fallback platform layer (see "Platform layer").
+- An Intel Mac also needs `nasm` to build FFmpeg.
+
+The project builds its own FFmpeg. It does not use an FFmpeg of the system, for example from Homebrew.
+Other systems use the fallback platform layer (see "Platform layer").
 
 ## Build and run
 
 ```sh
+./scripts/build-ffmpeg.sh                # one time: builds FFmpeg in ffmpeg-build/ (about 1 minute)
 cargo run --release                      # opens with no folder
 cargo run --release -- /path/to/folder   # opens a folder
 cargo test                               # unit tests and end-to-end playback tests
 ```
 
-The end-to-end tests make small videos with the `ffmpeg` command. They are skipped if the command is not installed.
+If `cargo` stops with `failed to run custom build command for ffmpeg-sys-next` and `'libavutil/avutil.h' file not found`, the FFmpeg of the project is not built. Run `./scripts/build-ffmpeg.sh`.
+
+## FFmpeg
+
+`scripts/build-ffmpeg.sh` downloads the FFmpeg source (version 7.1.5, pinned to one commit) and builds two things in `ffmpeg-build/`:
+
+| Result | Content | Use |
+|---|---|---|
+| `ffmpeg-build/prefix/` | Static libraries and headers | `cargo run`, `cargo build`, `cargo test`, and the app bundle link to them |
+| `ffmpeg-build/tools/bin/ffmpeg` | A small `ffmpeg` command with a test picture source, an H.264 encoder, and the MKV writer | The end-to-end tests make their test videos with it. It is not part of the app |
+
+- `.cargo/config.toml` points cargo to `ffmpeg-build/prefix/` (`FFMPEG_DIR`). All cargo commands link FFmpeg statically, so the executable uses only libraries that are part of macOS.
+- The libraries hold the MKV reader and these video decoders: H.264, HEVC, MJPEG, MPEG-4, MPEG-2, VP8, VP9, AV1, with VideoToolbox hardware decode. To add a format, change `DECODERS` in the script and run it again.
+- The script does nothing when its results are up to date. `ffmpeg-build/` is not in git, and `cargo clean` does not delete it.
+- To use an FFmpeg that you built in a different folder, set `FFMPEG_DIR` in the shell. It must be a static build with the same parts, and with no external libraries.
+- This FFmpeg build has the LGPL license. If you distribute the app, obey the LGPL rules for static linking.
 
 ## App bundle
 
@@ -26,13 +45,11 @@ The end-to-end tests make small videos with the `ffmpeg` command. They are skipp
 open "dist/Video Player.app"
 ```
 
-The script makes `dist/Video Player.app`. The app is one executable of about 16 MB with FFmpeg inside. It uses only libraries that are part of macOS, so it runs with no Homebrew installation. You can move it to `/Applications` and open it with a double-click.
+The script makes `dist/Video Player.app`. The app is one executable of about 18 MB with FFmpeg inside. You can move it to `/Applications` and open it with a double-click.
 
-- The first run downloads the FFmpeg source (pinned to one commit) and builds a small static FFmpeg in `target/ffmpeg-static/`. This takes about 1 minute. Later runs use the result again.
-- The static FFmpeg holds the MKV reader and these video decoders: H.264, HEVC, MJPEG, MPEG-4, MPEG-2, VP8, VP9, AV1. Change `DECODERS` in `scripts/build-ffmpeg.sh` to add a format.
+- The script runs `scripts/build-ffmpeg.sh` first, then makes a normal release build and packs it.
 - The app runs on the CPU type of the Mac that built it (Apple Silicon or Intel).
 - The signature is a local signature. To give the app to other persons, sign it with a Developer ID and notarize it. If you do not, macOS blocks the app on their Macs.
-- This FFmpeg build has the LGPL license. If you distribute the app, obey the LGPL rules for static linking.
 
 ## Controls
 
@@ -128,5 +145,4 @@ The app icon is one SVG file: `assets/app-icon/app-icon.svg`. To change the icon
 
 ## Limits
 
-- `cargo run` links to the FFmpeg libraries of the system. Only the app bundle is self-contained.
 - HDR video (BT.2020 PQ or HLG) is shown with no tone mapping.

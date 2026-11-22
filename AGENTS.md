@@ -11,16 +11,20 @@ A native desktop app in Rust that opens a folder of camera recordings (`<camera-
 ## Commands
 
 ```sh
-cargo run --release -- /path/to/folder        # run (links to the Homebrew FFmpeg through pkg-config)
+./scripts/build-ffmpeg.sh                     # one time: builds the FFmpeg of the project in ffmpeg-build/
+cargo run --release -- /path/to/folder        # run
 cargo test                                    # unit tests + end-to-end playback tests
 cargo test --lib time::tests::parses_typed_time     # one unit test
 cargo test --test playback paused_jump              # one end-to-end test (name filter)
 cargo clippy --all-targets --features selftest      # lint, must be clean
-./scripts/bundle-macos.sh                     # builds dist/Video Player.app (static FFmpeg, one executable)
+./scripts/bundle-macos.sh                     # builds dist/Video Player.app (one executable)
 ```
 
-- `tests/playback.rs` makes small videos with the `ffmpeg` command. The tests pass with a note if the command is not installed.
-- `cargo build` does not update `dist/Video Player.app`. Run `scripts/bundle-macos.sh` after a change if the app bundle must have it. The bundle build uses its own target folder (`target/static`) and the `static-ffmpeg` feature with `FFMPEG_DIR`, so it does not disturb the normal build.
+- The project never uses an FFmpeg of the system (Homebrew, `pkg-config`, or `ffmpeg` in `PATH`). `scripts/build-ffmpeg.sh` builds static libraries in `ffmpeg-build/prefix/` and a small `ffmpeg` command in `ffmpeg-build/tools/bin/`. `.cargo/config.toml` sets `FFMPEG_DIR` to the libraries, and all cargo commands link them statically.
+- If cargo fails in `ffmpeg-sys-next` with `'libavutil/avutil.h' file not found`, run `./scripts/build-ffmpeg.sh`.
+- `tests/playback.rs` makes small videos with `ffmpeg-build/tools/bin/ffmpeg`. Do not call a system `ffmpeg` or `ffprobe` in tests or scripts.
+- To add a decoder or another FFmpeg part, change the configure options in `scripts/build-ffmpeg.sh` and increase the number in its `WANT` line, so the script builds again.
+- `cargo build` does not update `dist/Video Player.app`. Run `scripts/bundle-macos.sh` after a change if the app bundle must have it. The bundle script uses the normal release build in `target/release`.
 
 ## Library versions
 

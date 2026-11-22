@@ -13,7 +13,8 @@ egui-wgpu = "0.37"
 egui_extras = { version = "0.37", default-features = false, features = ["svg"] }
 # Draws the app icon from its SVG file. egui_extras uses the same crate for the control bar icons.
 resvg = { version = "0.45", default-features = false }
-ffmpeg-sys-next = { version = "9.1", default-features = false, features = ["avcodec", "avformat", "swscale"] }
+# Static link to the FFmpeg that scripts/build-ffmpeg.sh builds. See .cargo/config.toml.
+ffmpeg-sys-next = { version = "9.1", default-features = false, features = ["avcodec", "avformat", "swscale", "static"] }
 rfd = "0.18"
 libc = "0.2"
 log = "0.4"
@@ -21,9 +22,6 @@ env_logger = "0.11"
 bytemuck = { version = "1", features = ["derive"] }
 
 [features]
-# Link FFmpeg into the executable. Needs FFMPEG_DIR to point to a static
-# FFmpeg. Use scripts/bundle-macos.sh, which sets all of this.
-static-ffmpeg = ["ffmpeg-sys-next/static"]
 # Development tool: scripted input and window pictures. See src/ui/selftest.rs.
 selftest = []
 

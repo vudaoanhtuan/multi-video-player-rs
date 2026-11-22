@@ -1,6 +1,6 @@
 #!/bin/bash
 # Builds "dist/Video Player.app": one executable with FFmpeg inside.
-# The app needs no Homebrew libraries. Open it with a double-click.
+# The app uses only libraries that are part of macOS. Open it with a double-click.
 #
 # Optional environment variables:
 #   BUNDLE_ID                  default: local.video-player
@@ -15,12 +15,11 @@ export MACOSX_DEPLOYMENT_TARGET="${MACOSX_DEPLOYMENT_TARGET:-12.0}"
 
 "$ROOT/scripts/build-ffmpeg.sh"
 
-# A separate target folder: the normal `cargo build` links to the system
-# FFmpeg, and the two builds must not replace each other.
-TARGET_DIR="$ROOT/target/static"
-FFMPEG_DIR="$ROOT/target/ffmpeg-static/prefix" cargo build --release --features static-ffmpeg \
-    --manifest-path "$ROOT/Cargo.toml" --target-dir "$TARGET_DIR"
-BINARY="$TARGET_DIR/release/$EXECUTABLE"
+# cargo reads .cargo/config.toml from the current folder. That file points
+# cargo to the FFmpeg of this project.
+cd "$ROOT"
+cargo build --release
+BINARY="$ROOT/target/release/$EXECUTABLE"
 
 # The executable must use only libraries that are part of macOS.
 EXTERNAL="$(otool -L "$BINARY" | tail -n +2 | awk '{print $1}' | grep -vE '^(/System/Library/|/usr/lib/)' || true)"
@@ -39,10 +38,9 @@ strip -x "$APP/Contents/MacOS/$EXECUTABLE"
 
 # The Finder icon: draw assets/app-icon/app-icon.svg at each size that macOS
 # uses, then pack the pictures into one .icns file.
-ICONSET="$TARGET_DIR/AppIcon.iconset"
+ICONSET="$ROOT/target/AppIcon.iconset"
 rm -rf "$ICONSET"
-FFMPEG_DIR="$ROOT/target/ffmpeg-static/prefix" cargo run --quiet --release --features static-ffmpeg \
-    --manifest-path "$ROOT/Cargo.toml" --target-dir "$TARGET_DIR" --example app_iconset -- "$ICONSET"
+cargo run --quiet --release --example app_iconset -- "$ICONSET"
 iconutil --convert icns "$ICONSET" --output "$APP/Contents/Resources/AppIcon.icns"
 
 cat >"$APP/Contents/Info.plist" <<PLIST

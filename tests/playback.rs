@@ -1,8 +1,9 @@
 //! End-to-end tests of scan, decode, and synced playback with real video
 //! files and no window.
 //!
-//! The tests make small videos with the `ffmpeg` command. When the command
-//! is not installed, the tests print a note and pass.
+//! The tests make small videos with the `ffmpeg` command that
+//! `scripts/build-ffmpeg.sh` builds for this project. They do not use an
+//! FFmpeg of the system.
 
 use std::path::{Path, PathBuf};
 use std::process::Command;
@@ -19,36 +20,42 @@ use video_player::time::{Timestamp, MICROS_PER_SEC};
 const FRAME: i64 = 40_000; // 25 frames each second
 const MS: i64 = 1_000;
 
+/// The `ffmpeg` command of this project. It is built with the libraries.
+fn ffmpeg_tool() -> PathBuf {
+    let tool = Path::new(env!("CARGO_MANIFEST_DIR")).join("ffmpeg-build/tools/bin/ffmpeg");
+    assert!(tool.exists(), "{} is not built. Run ./scripts/build-ffmpeg.sh", tool.display());
+    tool
+}
+
 /// Camera `a`: 10:00:00 (4 s), 10:00:04 (4 s), then a gap, 10:00:12 (4 s).
 /// Camera `b`: 10:00:00 (16 s). Key frames are 1 second apart.
-fn fixtures() -> Option<&'static Path> {
-    static DIR: OnceLock<Option<PathBuf>> = OnceLock::new();
+fn fixtures() -> &'static Path {
+    static DIR: OnceLock<PathBuf> = OnceLock::new();
     DIR.get_or_init(|| {
         let dir = Path::new(env!("CARGO_TARGET_TMPDIR")).join("playback-fixtures");
         let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).ok()?;
+        std::fs::create_dir_all(&dir).expect("cannot make the folder for the test videos");
         for (name, seconds) in [
             ("a_20261019T100000.mkv", 4),
             ("a_20261019T100004.mkv", 4),
             ("a_20261019T100012.mkv", 4),
             ("b_20261019T100000.mkv", 16),
         ] {
-            let status = Command::new("ffmpeg")
+            // H.264 from the encoder of macOS, which also works with no encoder hardware.
+            let status = Command::new(ffmpeg_tool())
                 .args(["-hide_banner", "-loglevel", "error", "-y", "-f", "lavfi"])
                 .args(["-i", "testsrc2=size=320x240:rate=25", "-t", &seconds.to_string()])
-                .args(["-an", "-pix_fmt", "yuv420p", "-c:v", "libx264", "-preset", "ultrafast", "-g", "25", "-bf", "0"])
+                .args(["-an", "-pix_fmt", "yuv420p", "-c:v", "h264_videotoolbox", "-allow_sw", "1"])
+                .args(["-b:v", "600k", "-g", "25", "-bf", "0"])
                 .arg(dir.join(name))
-                .status();
-            if !status.is_ok_and(|s| s.success()) {
-                eprintln!("note: the ffmpeg command is not available, playback tests are skipped");
-                return None;
-            }
+                .status()
+                .expect("cannot run the ffmpeg command of this project");
+            assert!(status.success(), "ffmpeg cannot make the test video {name}");
         }
-        std::fs::write(dir.join("notes.txt"), "not a video").ok()?;
-        std::fs::write(dir.join("a_20261019T100020.mkv"), "not a video").ok()?;
-        Some(dir)
+        std::fs::write(dir.join("notes.txt"), "not a video").unwrap();
+        std::fs::write(dir.join("a_20261019T100020.mkv"), "not a video").unwrap();
+        dir
     })
-    .as_deref()
 }
 
 fn ts(text: &str) -> Timestamp {
@@ -128,7 +135,7 @@ impl Rig {
 
 #[test]
 fn probe_reads_the_stored_length() {
-    let Some(dir) = fixtures() else { return };
+    let dir = fixtures();
     let length = FfmpegProbe.video_length(&dir.join("a_20261019T100000.mkv")).unwrap().unwrap();
     assert!((length - 4 * MICROS_PER_SEC).abs() < 100 * MS, "{length}");
     assert!(FfmpegProbe.video_length(&dir.join("notes.txt")).is_err());
@@ -136,7 +143,7 @@ fn probe_reads_the_stored_length() {
 
 #[test]
 fn scan_builds_the_timelines() {
-    let Some(dir) = fixtures() else { return };
+    let dir = fixtures();
     let scan = scan_folder(dir, &FfmpegProbe).unwrap();
     assert_eq!(scan.skipped, 2); // notes.txt and the broken mkv
     let library = scan.library.unwrap();
@@ -148,7 +155,7 @@ fn scan_builds_the_timelines() {
 
 #[test]
 fn decoder_seek_starts_at_a_key_frame_before_the_target() {
-    let Some(dir) = fixtures() else { return };
+    let dir = fixtures();
     for (mode, opts) in decode_modes() {
         let mut decoder = Decoder::open(&dir.join("b_20261019T100000.mkv"), opts).unwrap();
         decoder.seek(2_500 * MS).unwrap();
@@ -173,7 +180,7 @@ fn decoder_seek_starts_at_a_key_frame_before_the_target() {
 
 #[test]
 fn paused_jump_shows_the_exact_frame() {
-    let Some(dir) = fixtures() else { return };
+    let dir = fixtures();
     let library = library(dir);
     for (mode, opts) in decode_modes() {
         let mut rig = Rig::new(&library, opts);
@@ -194,7 +201,7 @@ fn paused_jump_shows_the_exact_frame() {
 
 #[test]
 fn gap_is_black_and_other_cameras_continue() {
-    let Some(dir) = fixtures() else { return };
+    let dir = fixtures();
     let library = library(dir);
     let mut rig = Rig::new(&library, DecodeOptions { hw: None });
     rig.clock.jump(ts("20261019T100009"));
@@ -208,7 +215,7 @@ fn gap_is_black_and_other_cameras_continue() {
 
 #[test]
 fn plays_in_sync_through_a_chunk_change_and_into_a_gap() {
-    let Some(dir) = fixtures() else { return };
+    let dir = fixtures();
     let library = library(dir);
     for (mode, opts) in decode_modes() {
         let mut rig = Rig::new(&library, opts);
@@ -253,7 +260,7 @@ fn plays_in_sync_through_a_chunk_change_and_into_a_gap() {
 
 #[test]
 fn high_speed_skips_frames_and_keeps_the_clock_rate() {
-    let Some(dir) = fixtures() else { return };
+    let dir = fixtures();
     let library = library(dir);
     let mut rig = Rig::new(&library, DecodeOptions { hw: None });
     rig.wait_until("first frames", |f| f.iter().all(Option::is_some));
@@ -279,7 +286,7 @@ fn high_speed_skips_frames_and_keeps_the_clock_rate() {
 
 #[test]
 fn clock_stops_at_the_end_of_the_range() {
-    let Some(dir) = fixtures() else { return };
+    let dir = fixtures();
     let library = library(dir);
     let mut rig = Rig::new(&library, DecodeOptions { hw: None });
     rig.clock.jump(library.end.offset(-100 * MS));
