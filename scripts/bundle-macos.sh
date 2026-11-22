@@ -37,6 +37,14 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 cp "$BINARY" "$APP/Contents/MacOS/$EXECUTABLE"
 strip -x "$APP/Contents/MacOS/$EXECUTABLE"
 
+# The Finder icon: draw assets/app-icon/app-icon.svg at each size that macOS
+# uses, then pack the pictures into one .icns file.
+ICONSET="$TARGET_DIR/AppIcon.iconset"
+rm -rf "$ICONSET"
+FFMPEG_DIR="$ROOT/target/ffmpeg-static/prefix" cargo run --quiet --release --features static-ffmpeg \
+    --manifest-path "$ROOT/Cargo.toml" --target-dir "$TARGET_DIR" --example app_iconset -- "$ICONSET"
+iconutil --convert icns "$ICONSET" --output "$APP/Contents/Resources/AppIcon.icns"
+
 cat >"$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -46,6 +54,7 @@ cat >"$APP/Contents/Info.plist" <<PLIST
     <key>CFBundleDisplayName</key><string>$APP_NAME</string>
     <key>CFBundleIdentifier</key><string>$BUNDLE_ID</string>
     <key>CFBundleExecutable</key><string>$EXECUTABLE</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleInfoDictionaryVersion</key><string>6.0</string>
     <key>CFBundleShortVersionString</key><string>$VERSION</string>

@@ -9,13 +9,15 @@ fn main() -> eframe::Result {
     // The first argument can be the folder to open.
     let folder = std::env::args_os().nth(1).map(PathBuf::from).filter(|p| p.is_dir());
 
-    let mut options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default()
-            .with_title("Video Player")
-            .with_inner_size([1280.0, 800.0])
-            .with_min_inner_size([640.0, 360.0]),
-        ..Default::default()
-    };
+    let mut viewport = egui::ViewportBuilder::default()
+        .with_title("Video Player")
+        .with_inner_size([1280.0, 800.0])
+        .with_min_inner_size([640.0, 360.0]);
+    // The icon in the Dock or the task bar. Without it, eframe shows its own icon.
+    if let Some(icon) = video_player::ui::app_icon::icon_data() {
+        viewport = viewport.with_icon(icon);
+    }
+    let mut options = eframe::NativeOptions { viewport, ..Default::default() };
     if let WgpuSetup::CreateNew(setup) = &mut options.wgpu_options.wgpu_setup {
         // Video tiles are a light load. Prefer the low power GPU.
         setup.power_preference = wgpu::PowerPreference::LowPower;

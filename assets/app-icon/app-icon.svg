@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <title>Video Player app icon</title>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5BA2FF"/>
+      <stop offset="1" stop-color="#2F74E6"/>
+    </linearGradient>
+    <!-- Cuts a gap around the play symbol out of the tiles -->
+    <mask id="gap">
+      <rect width="1024" height="1024" fill="#FFFFFF"/>
+      <path d="M452 402 L452 622 L642 512 Z" fill="#000000" stroke="#000000" stroke-width="104" stroke-linejoin="round"/>
+    </mask>
+  </defs>
+  <!-- macOS icon shape: a rounded square with a margin of 100 on a 1024 canvas -->
+  <rect x="100" y="100" width="824" height="824" rx="186" fill="url(#background)"/>
+  <!-- four camera tiles -->
+  <g fill="#FFFFFF" fill-opacity="0.26" mask="url(#gap)">
+    <rect x="222" y="222" width="270" height="270" rx="44"/>
+    <rect x="532" y="222" width="270" height="270" rx="44"/>
+    <rect x="222" y="532" width="270" height="270" rx="44"/>
+    <rect x="532" y="532" width="270" height="270" rx="44"/>
+  </g>
+  <!-- play symbol -->
+  <path d="M452 402 L452 622 L642 512 Z" fill="#FFFFFF" stroke="#FFFFFF" stroke-width="34" stroke-linejoin="round"/>
+</svg>

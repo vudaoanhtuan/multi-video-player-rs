@@ -1,6 +1,7 @@
 //! The app window: camera grid and control bar. The UI is egui, which is the
 //! same on all platforms.
 
+pub mod app_icon;
 mod bbox;
 mod clipboard;
 mod controls;

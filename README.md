@@ -116,6 +116,10 @@ A unit test checks that the manual lists each hotkey. When you add a hotkey, add
 
 The control bar icons are SVG files in `assets/icons/`, from the Material Icons set (Apache License 2.0). See `assets/icons/README.md` for how to add an icon.
 
+The app icon is one SVG file: `assets/app-icon/app-icon.svg`. To change the icon, change this file only.
+- The app draws it at start for the Dock (`src/ui/app_icon.rs`).
+- `scripts/bundle-macos.sh` draws it at each size that macOS uses and puts the result in the app bundle as `AppIcon.icns`. Finder shows this file.
+
 ## Development tools
 
 - `VIDEO_PLAYER_DECODE=software` or `VIDEO_PLAYER_DECODE=copy` turns off hardware decode or zero copy. Use it to compare the decode paths.
@@ -125,5 +129,4 @@ The control bar icons are SVG files in `assets/icons/`, from the Material Icons 
 ## Limits
 
 - `cargo run` links to the FFmpeg libraries of the system. Only the app bundle is self-contained.
-- The app bundle has no custom icon.
 - HDR video (BT.2020 PQ or HLG) is shown with no tone mapping.
