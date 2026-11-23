@@ -7,7 +7,7 @@
 //!
 //! | Action | Argument | Result |
 //! |---|---|---|
-//! | `key` | egui key name, for example `Space` or `Shift+G` | Key press and release |
+//! | `key` | egui key name, for example `Space` or `Shift+1` | Key press and release |
 //! | `text` | text | Typed text |
 //! | `paste` | text | A paste of this text (Cmd+V) |
 //! | `clipboard` | text | Replaces the system clipboard with a test clipboard that holds this text |

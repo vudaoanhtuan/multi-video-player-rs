@@ -91,7 +91,7 @@ The control bar is one row at the bottom of the window. From left to right:
 - A paste while the dialog is open does not go into the text box.
   - The pasted text is a valid time: close the dialog and jump.
   - The pasted text is not a valid time: do nothing. The text box does not change.
-- Shift + G reads the clipboard. If the clipboard text is a valid time, jump to it with no dialog. If not, nothing happens.
+- The H key reads the clipboard. If the clipboard text is a valid time, jump to it with no dialog. If not, nothing happens.
 - Playback continues while the dialog is open.
 - A time before the range start jumps to the range start. A time after the range end jumps to the range end.
 - If the range passes midnight, a time before the range start time of day means the next day.
@@ -292,7 +292,7 @@ The control bar is one row at the bottom of the window. From left to right:
 - The G key, the text `21:45:10`, and Enter sets the clock to 21:45:10 and all tiles update.
 - A paste of `214510` in the "go to time" dialog closes the dialog and sets the clock to 21:45:10.
 - A paste of text that is not a time leaves the dialog open and the text box unchanged.
-- Shift + G with `21:45:10` in the clipboard sets the clock to 21:45:10. With other text in the clipboard, the clock does not change.
+- The H key with `21:45:10` in the clipboard sets the clock to 21:45:10. With other text in the clipboard, the clock does not change.
 - A paste of `21:45` in the "go to time" dialog does nothing. The typed text `21:45` and Enter sets the clock to 21:45:00.
 - A click on the timer while playing pauses playback and puts the clock time in the clipboard. The T key does the same.
 - The speed menu shows the 20 speeds from 1x to 20x.

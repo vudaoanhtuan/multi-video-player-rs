@@ -188,7 +188,7 @@ pub struct App {
     /// The file in which the app saves the settings. `None`: the app does not save them.
     settings_file: Option<PathBuf>,
     clipboard: clipboard::Clipboard,
-    /// Shift+G asked for the clipboard text. A valid time in it starts a jump.
+    /// The H key asked for the clipboard text. A valid time in it starts a jump.
     clipboard_jump: bool,
     last_refresh: Instant,
     #[cfg(feature = "selftest")]
@@ -418,13 +418,13 @@ impl App {
     fn handle_keys(&mut self, ctx: &egui::Context) {
         let State::Ready(session) = &mut self.state else { return };
 
-        // The answer to an earlier Shift+G: jump if the clipboard text is a
+        // The answer to an earlier H key: jump if the clipboard text is a
         // time in a full form. With other text, nothing happens.
         if let Some(text) = self.clipboard.take_requested(ctx) {
             if std::mem::take(&mut self.clipboard_jump) && session.goto.is_none() {
                 let time_of_day = parse_pasted_time_of_day(&text);
                 // The clipboard can hold private text. Do not log the text.
-                log::debug!("Shift+G: clipboard text is a time: {}", time_of_day.is_some());
+                log::debug!("H key: clipboard text is a time: {}", time_of_day.is_some());
                 if let Some(time_of_day) = time_of_day {
                     session.jump_to_time_of_day(time_of_day);
                 }
@@ -457,11 +457,11 @@ impl App {
         if session.bbox.is_picking() && pressed(Modifiers::NONE, Key::Escape) {
             session.toggle_bbox();
         }
-        // Shift+G first: a check for G with no modifier also accepts Shift+G.
-        if pressed(Modifiers::SHIFT, Key::G) {
+        if pressed(Modifiers::NONE, Key::H) {
             self.clipboard.request(ctx);
             self.clipboard_jump = true;
-        } else if pressed(Modifiers::NONE, Key::G) {
+        }
+        if pressed(Modifiers::NONE, Key::G) {
             session.open_goto();
             // The same key press also arrives as the text "g". Keep it out of the text box.
             ctx.input_mut(|i| i.events.retain(|event| !matches!(event, egui::Event::Text(_))));
